@@ -6,3 +6,5 @@
 #include <lt/ray.h>
 #include <lt/scene.h>
 #include <lt/brdf.h>
+#include <lt/sensor.h>
+#include <lt/sampler.h>
