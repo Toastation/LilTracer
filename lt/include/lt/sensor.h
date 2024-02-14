@@ -3,7 +3,7 @@
 
 namespace LT_NAMESPACE {
 	
-	template<typename T>
+
 	class Sensor
 	{
 	public:
@@ -15,7 +15,7 @@ namespace LT_NAMESPACE {
 
 		int w;
 		int h;
-		std::vector<T> data;
+		std::vector<Spectrum> data;
 	
 	};
 

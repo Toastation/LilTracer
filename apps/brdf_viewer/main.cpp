@@ -21,7 +21,7 @@ static void glfw_error_callback(int error, const char* description)
 
 struct RenderSensor {
     GLuint id;
-    lt::Sensor<lt::vec3> * sensor = nullptr;
+    lt::Sensor * sensor = nullptr;
     bool initialized = false;
 
 
@@ -29,7 +29,7 @@ struct RenderSensor {
     bool update_data() {
 
         if (initialized) {
-            glBindTexture(GL_TEXTURE, id);
+            glBindTexture(GL_TEXTURE_2D, id);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->data.data());
             return true;
         }
@@ -59,26 +59,39 @@ struct RenderSensor {
 
 
 struct AppData {
-    lt::Sensor<lt::vec3>* s_brdf_slice;
+    lt::Sensor* s_brdf_slice;
     RenderSensor rs_brdf_slice;
     int current_brdf_idx;
     std::vector<lt::Brdf*> brdfs;
     float theta_i = 0.5;
     float phi_i = 0.;
+
+    lt::Scene* scn_dir_light;
+    lt::Camera* cam_dir_light;
+    lt::Sensor* sen_dir_light;
+    lt::Integrator* int_dir_light;
+    RenderSensor rsen_dir_light;
 };
 
 void AppInit(AppData& app_data) {
-    app_data.s_brdf_slice = new lt::Sensor<lt::vec3>(1024, 256);
+    app_data.s_brdf_slice = new lt::Sensor(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
     app_data.current_brdf_idx = 0;
 
     app_data.brdfs.push_back(new lt::Diffuse);
     app_data.brdfs.push_back(new lt::RoughConductor);
+
+    app_data.scn_dir_light = new lt::CornellBox();
+    app_data.cam_dir_light = new lt::PerspectiveCamera(lt::vec3(-50, 0., 0.), lt::vec3(0.), 50.);
+    app_data.sen_dir_light = new lt::Sensor(512, 512);
+    app_data.int_dir_light = new lt::NormalIntegrator();
+    app_data.rsen_dir_light.sensor = app_data.sen_dir_light;
+    app_data.rsen_dir_light.initialize();
 }
 
 
-void brdf_slice(lt::Brdf* brdf, float th_i, float ph_i, lt::Sensor<lt::vec3>* sensor) {
+void brdf_slice(lt::Brdf* brdf, float th_i, float ph_i, lt::Sensor* sensor) {
     
 
 
@@ -135,6 +148,24 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 case lt::Params::Type::VEC3:
                     ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]);
                     break;
+                case lt::Params::Type::SH:
+                    if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
+                    {
+                        std::vector<float>* sh = (std::vector<float>*)cur_brdf->params.ptrs[i];
+                        ImGui::TableSetupColumn("Deg");
+                        ImGui::TableSetupColumn("val");
+                        ImGui::TableHeadersRow();
+                        
+                        for(int j = 0; j < sh->size(); j++){
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%d", j);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f", sh->at(j));
+                        }
+
+                        ImGui::EndTable();
+                    }
+                    break;
                 default:
                     break;
                 }
@@ -163,11 +194,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     brdf_slice(cur_brdf, app_data.theta_i, app_data.phi_i, app_data.s_brdf_slice);
                     app_data.rs_brdf_slice.update_data();
                  
-                    //ImGui::SetCursorPos( ImVec2( (ImGui::GetWindowSize().x - tex_width)*0.5, (ImGui::GetWindowSize().y - tex_height)*0.5));
-                    //ImGui::Image((void*)(intptr_t)app_data.rt_brdf_slice._id, ImVec2(app_data.rt_brdf_slice._w, app_data.rt_brdf_slice._h));
-                    if(ImPlot::BeginPlot("##image")){
+                    if(ImPlot::BeginPlot("##image","","",ImVec2(-1,0),ImPlotFlags_Equal)) {
                         ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.id, ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
-                            ImPlot::EndPlot();
+                        ImPlot::EndPlot();
                     }
                     ImGui::EndTabItem();
                 }
@@ -239,6 +268,14 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
+                    app_data.int_dir_light->render(app_data.cam_dir_light, app_data.sen_dir_light, *app_data.scn_dir_light);
+                    app_data.rsen_dir_light.update_data();
+
+                    if (ImPlot::BeginPlot("##image","","", ImVec2(0,0),ImPlotFlags_Equal)) {
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id, ImVec2(0, 0), ImVec2(app_data.sen_dir_light->w, app_data.sen_dir_light->h));
+                        ImPlot::EndPlot();
+                    }
+
                     ImGui::EndTabItem();
                 }
 

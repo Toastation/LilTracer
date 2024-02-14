@@ -12,17 +12,55 @@ public:
 	Scene();
 	~Scene();
 
-	void intersect(Ray r) {
+	bool intersect(const Ray& r, SurfaceInteraction& si) {
 
+		SurfaceInteraction si_t;
+		
+		bool has_intersect = false;
+
+		for (int i = 0; i < objs.size(); i++) {
+			if (objs[i]->intersect(r, si_t) && si_t.t < si.t) {
+				si = si_t;
+				has_intersect = true;
+			}
+		}
+
+		return has_intersect;
+		
 	}
 
-	inline const std::vector<Mesh*> meshes() const;
+	std::vector<Object*> objs;
 
-private:
-	
-	std::vector<Mesh*> _meshes;
+
 
 };
+
+
+class CornellBox : public Scene
+{
+public:
+	CornellBox() {
+		objs.push_back(new Sphere(vec3(0.), 2.));
+		objs.push_back(new Sphere(vec3(0., 4., 0.), 2.));
+		objs.push_back(new Sphere(vec3(0., 0., 3.), 1.));
+	};
+
+private:
+
+};
+
+
+//inline Scene cornell_box() {
+//
+//	Scene scn;
+//
+//	scn.objs.push_back(new Sphere(vec3(0.), 2.));
+//	scn.objs.push_back(new Sphere(vec3(0.,4.,0.), 2.));
+//	scn.objs.push_back(new Sphere(vec3(0.,0.,3.), 1.));
+//
+//	return scn;
+//
+//}
 
 
 }

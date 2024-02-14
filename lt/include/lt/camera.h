@@ -26,16 +26,14 @@ public:
 	{
 		_view = glm::lookAt(_pos, _center, vec3(0.,1.,0.));
 		_inv_view = glm::inverse(_view);
-		_proj = glm::perspective((double)_fov, 1., 0., 1000.);
+		_proj = glm::perspective((double)_fov, 1., 0.0001, 1.);
 		_inv_proj = glm::inverse(_proj);
 	}
 	
 
-
-	Ray generate_ray(Float u, Float v) {
-		u = 2 * u - 1;
-		v = 2 * v - 1;
-		
+	// u in [-1 , 1]
+	// v in [-1 , 1]
+	Ray generate_ray(Float u, Float v) {		
 
 		glm::vec4 d_eye = _inv_proj * glm::vec4(u, v, -1., 1.);
 		d_eye.w = 0.;

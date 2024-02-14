@@ -11,9 +11,4 @@ Scene::~Scene()
 {
 }
 
-inline const std::vector<Mesh*> Scene::meshes() const
-{
-	return _meshes;
-}
-
 }

@@ -4,20 +4,30 @@
 
 namespace LT_NAMESPACE {
 
-class Ray
-{
-public:
-	Ray(vec3 o, vec3 d) :
-		o(o),
-		d(d){}
+	class SurfaceInteraction
+	{
+	public:
+		SurfaceInteraction() : nor(vec3(0.)), pos(vec3(0.)), t(1000000.) {}
+		SurfaceInteraction(vec3 pos, vec3 nor) : nor(nor), pos(pos), t(1000000.) {}
+		vec3 nor;
+		vec3 pos;
+		float t;
+	};
 
-	~Ray() {}
 
-	vec3 o;
-	vec3 d;
+	class Ray
+	{
+	public:
+		Ray(vec3 o, vec3 d) :
+			o(o),
+			d(d){}
 
-private:
+		~Ray() {}
 
-};
+		vec3 o;
+		vec3 d;
+
+
+	};
 
 }

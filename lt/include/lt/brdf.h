@@ -47,11 +47,16 @@ namespace LT_NAMESPACE {
 
 	class RoughConductor : public Brdf{
 	public:
-		PARAMETER(vec3, albedi, 0.5);
 		PARAMETER(vec3 , albedo, 0.5);
+		PARAMETER(std::vector<float>, albedi, 0);
 		PARAMETER(float, albeda, 0.5);
 		
 		RoughConductor() {
+			albedi.push_back(2.);
+			albedi.push_back(1.);
+			albedi.push_back(3.);
+			albedi.push_back(4.);
+			albedi.push_back(9.);
 			setup();
 		}
 
@@ -62,7 +67,7 @@ namespace LT_NAMESPACE {
 		void setup() {
 			name = "RoughConductor";
 			params.add("albedo", Params::Type::VEC3, &albedo);
-			params.add("albedi", Params::Type::VEC3, &albedi);
+			params.add("albedi", Params::Type::SH, &albedi);
 			params.add("albeda", Params::Type::FLOAT, &albeda);
 		}
 

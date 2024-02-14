@@ -7,7 +7,8 @@ namespace LT_NAMESPACE {
 		enum class Type
 		{
 			FLOAT,
-			VEC3
+			VEC3,
+			SH
 		};
 
 		int count = 0;
