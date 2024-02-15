@@ -25,7 +25,7 @@ namespace LT_NAMESPACE{
 		if (size == 0)
 			return arr;
 
-		T delta = (end - start) / size;
+		T delta = (end - start) / (size - 1);
 		for (int i = 0; i < size; i++)
 			arr[i] = start + delta * i;
 
