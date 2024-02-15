@@ -2,6 +2,7 @@
 
 #include <lt/lt_common.h>
 #include <lt/mesh.h>
+#include <lt/light.h>
 #include <lt/ray.h>
 
 namespace LT_NAMESPACE {
@@ -30,7 +31,7 @@ public:
 	}
 
 	std::vector<Object*> objs;
-
+	std::vector<Light*> lights;
 
 
 };
@@ -40,9 +41,9 @@ class CornellBox : public Scene
 {
 public:
 	CornellBox() {
-		objs.push_back(new Sphere(vec3(0.), 2.));
-		objs.push_back(new Sphere(vec3(0., 4., 0.), 2.));
-		objs.push_back(new Sphere(vec3(0., 0., 3.), 1.));
+		//objs.push_back(new Sphere(vec3(0.), 2.));
+		//objs.push_back(new Sphere(vec3(0., 4., 0.), 2.));
+		//objs.push_back(new Sphere(vec3(0., 0., 3.), 1.));
 	};
 
 private:

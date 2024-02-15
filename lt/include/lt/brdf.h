@@ -14,7 +14,7 @@ namespace LT_NAMESPACE {
 		Brdf();
 		~Brdf();
 		
-		virtual vec3 eval(vec3 wi, vec3 wo) = 0;
+		virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
 		
 		virtual vec3 sample(vec3 wi, vec3 wo, Sampler sampler);
 		
@@ -28,47 +28,67 @@ namespace LT_NAMESPACE {
 
 	class Diffuse : public Brdf {
 	public:
-		PARAMETER(float, albedo, 0.5);
-		PARAMETER(float, intensity, 0.5);
+		PARAMETER(Spectrum, albedo, 0.5);
 		Diffuse() {
 			setup();
 		}
 		
-		vec3 eval(vec3 wi, vec3 wo) {
-			return vec3(0., albedo, intensity) * wo.z;
+		Spectrum eval(vec3 wi, vec3 wo) {
+			return albedo * wo.z;
 		}
 
 		void setup() {
 			name = "Diffuse";
-			params.add("albedo", Params::Type::FLOAT, &albedo);
-			params.add("intensity", Params::Type::FLOAT, &intensity);
+			params.add("albedo", Params::Type::VEC3, &albedo);
 		}
 	};
 
-	class RoughConductor : public Brdf{
+	class RoughConductor : public Brdf {
 	public:
-		PARAMETER(vec3 , albedo, 0.5);
-		PARAMETER(std::vector<float>, albedi, 0);
-		PARAMETER(float, albeda, 0.5);
-		
+		PARAMETER(Float, alpha_x, 0.5);
+		PARAMETER(Float, alpha_y, 0.5);
+		PARAMETER(Spectrum, albedo, 0.5);
+
 		RoughConductor() {
-			albedi.push_back(2.);
-			albedi.push_back(1.);
-			albedi.push_back(3.);
-			albedi.push_back(4.);
-			albedi.push_back(9.);
 			setup();
 		}
 
-		vec3 eval(vec3 wi, vec3 wo) {
-			return albeda * albedo * wo.z;
+		Spectrum eval(vec3 wi, vec3 wo) {
+			return albedo * wo.z;
 		}
 
 		void setup() {
 			name = "RoughConductor";
 			params.add("albedo", Params::Type::VEC3, &albedo);
-			params.add("albedi", Params::Type::SH, &albedi);
-			params.add("albeda", Params::Type::FLOAT, &albeda);
+			params.add("alpha_x", Params::Type::FLOAT, &alpha_x);
+			params.add("alpha_y", Params::Type::FLOAT, &alpha_y);
+		}
+	};
+
+	class TestBrdf : public Brdf{
+	public:
+		PARAMETER(float, v1, 0.5);
+		PARAMETER(Spectrum, v2, 0.5);
+		PARAMETER(std::vector<float>, v3, 0);
+		
+		TestBrdf() {
+			v3.push_back(2.);
+			v3.push_back(1.);
+			v3.push_back(3.);
+			v3.push_back(4.);
+			v3.push_back(9.);
+			setup();
+		}
+
+		Spectrum eval(vec3 wi, vec3 wo) {
+			return Spectrum(wo.z);
+		}
+
+		void setup() {
+			name = "TestBrdf";
+			params.add("float", Params::Type::FLOAT, &v1);
+			params.add("vec3", Params::Type::VEC3, &v2);
+			params.add("array", Params::Type::SH, &v3);
 		}
 
 	};

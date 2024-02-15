@@ -12,7 +12,7 @@ namespace LT_NAMESPACE{
 
 	using vec3 = glm::vec3;
 	
-	using Spectrum = glm::vec3;
+	using Spectrum = vec3;
 
 	#define Float float
 	

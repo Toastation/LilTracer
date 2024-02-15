@@ -2,6 +2,7 @@
 
 #include <lt/lt_common.h>
 #include <lt/ray.h>
+#include <lt/brdf.h>
 
 
 namespace LT_NAMESPACE {
@@ -11,6 +12,7 @@ namespace LT_NAMESPACE {
 	{
 	public:
 		virtual bool intersect(Ray r, SurfaceInteraction& si) = 0;
+		Brdf* brdf;
 
 	};
 
@@ -25,7 +27,9 @@ namespace LT_NAMESPACE {
 	class Sphere : public Object
 	{
 	public:
-		Sphere(vec3 pos, float rad) : pos(pos), rad(rad) {}
+		Sphere(vec3 pos, float rad, Brdf* brdf) : pos(pos), rad(rad) {
+			this->brdf = brdf;
+		}
 
 		bool intersect(Ray r, SurfaceInteraction& si) {
 			vec3 d = r.o - pos;
@@ -37,12 +41,12 @@ namespace LT_NAMESPACE {
 				si.t = t;
 				si.pos = r.o + t * r.d;
 				si.nor = (si.pos - pos) / rad;
+				si.brdf = brdf;
 				return true;
 			}
 			return false;
 		}
 
-	private:
 		vec3 pos;
 		float rad;
 	};
