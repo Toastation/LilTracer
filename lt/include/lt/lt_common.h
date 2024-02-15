@@ -19,14 +19,16 @@ namespace LT_NAMESPACE{
 	const Float pi = 3.14159265359;
 
 	template<typename T>
-	inline std::vector<T> linspace(T start, T end, int size) {
+	inline std::vector<T> linspace(T start, T end, size_t size) {
 		std::vector<T> arr;
 		arr.resize(size);
 		if (size == 0)
 			return arr;
+		if (size == 1)
+			return {start};
 
-		T delta = (end - start) / size;
-		for (int i = 0; i < size; i++)
+		T delta = (end - start) / (size - 1);
+		for (size_t i = 0; i < size; i++)
 			arr[i] = start + delta * i;
 
 		return arr;
