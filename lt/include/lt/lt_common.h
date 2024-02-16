@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include <memory>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <math.h>

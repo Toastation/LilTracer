@@ -2,24 +2,26 @@
 
 #include <lt/lt_common.h>
 #include <lt/ray.h>
+#include <lt/serialize.h>
+
 
 namespace LT_NAMESPACE {
 
-class Camera
+class Camera : public Serializable
 {
 public:
-	Camera();
-	~Camera();
+	Camera(const std::string& type) : type(type) {}
 
 	virtual Ray generate_ray(Float u, Float v) = 0;
 
-
+	std::string type;
 };
 
 class PerspectiveCamera : public Camera
 {
 public:
 	PerspectiveCamera(vec3 pos, vec3 center, float fov, float aspect) :
+		Camera("PerspectiveCamera"),
 		pos(pos),
 		center(center),
 		fov(fov),
@@ -53,6 +55,15 @@ public:
 	glm::mat4 proj;
 	glm::mat4 inv_view;
 	glm::mat4 inv_proj;
+
+protected:
+	void link_params() {
+		params.add("pos", Params::Type::VEC3, &pos);
+		params.add("center", Params::Type::VEC3, &center);
+		params.add("aspect", Params::Type::FLOAT, &aspect);
+		params.add("fov", Params::Type::FLOAT, &fov);
+	}
+
 };
 
 

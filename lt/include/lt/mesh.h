@@ -8,15 +8,15 @@
 namespace LT_NAMESPACE {
 
 
-	class Object
+	class Shape
 	{
 	public:
 		virtual bool intersect(Ray r, SurfaceInteraction& si) = 0;
-		Brdf* brdf;
+		std::shared_ptr<Brdf> brdf;
 
 	};
 
-	class Mesh : public Object
+	class Mesh : public Shape
 	{
 	public:
 		bool intersect(Ray r, SurfaceInteraction& si) {
@@ -24,10 +24,10 @@ namespace LT_NAMESPACE {
 		}
 	};
 
-	class Sphere : public Object
+	class Sphere : public Shape
 	{
 	public:
-		Sphere(vec3 pos, float rad, Brdf* brdf) : pos(pos), rad(rad) {
+		Sphere(vec3 pos, float rad, std::shared_ptr<Brdf> brdf) : pos(pos), rad(rad) {
 			this->brdf = brdf;
 		}
 

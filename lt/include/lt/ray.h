@@ -13,7 +13,7 @@ namespace LT_NAMESPACE {
 		vec3 nor;
 		vec3 pos;
 		float t;
-		Brdf* brdf;
+		std::shared_ptr<Brdf> brdf;
 	};
 
 

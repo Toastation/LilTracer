@@ -62,7 +62,7 @@ struct AppData {
     lt::Sensor* s_brdf_slice;
     RenderSensor rs_brdf_slice;
     int current_brdf_idx;
-    std::vector<lt::Brdf*> brdfs;
+    std::vector<std::shared_ptr<lt::Brdf>> brdfs;
     float theta_i = 0.5;
     float phi_i = 0.;
 
@@ -80,15 +80,17 @@ void AppInit(AppData& app_data) {
     app_data.rs_brdf_slice.initialize();
     app_data.current_brdf_idx = 0;
 
-    app_data.brdfs.push_back(new lt::Diffuse);
-    app_data.brdfs.push_back(new lt::RoughConductor);
-    app_data.brdfs.push_back(new lt::TestBrdf);
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("RoughConductor"));
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("TestBrdf"));
 
+    //app_data.scn_dir_light = lt::cornell_box();
     app_data.scn_dir_light = new lt::Scene();
     lt::vec3 ld = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i), std::cos(app_data.theta_i));
-    app_data.scn_dir_light->lights.push_back(new lt::DirectionnalLight(ld));
-    lt::Sphere* sph = new lt::Sphere(lt::vec3(0), 1, app_data.brdfs[app_data.current_brdf_idx]);
-    app_data.scn_dir_light->objs.push_back(sph);
+    app_data.scn_dir_light->lights.push_back(lt::Factory<lt::Light>::create("DirectionnalLight"));
+    
+    std::shared_ptr<lt::Sphere> sph = std::make_shared<lt::Sphere>(lt::vec3(0), 1, app_data.brdfs[app_data.current_brdf_idx]);
+    app_data.scn_dir_light->shapes.push_back(sph);
     app_data.cam_dir_light = new lt::PerspectiveCamera(lt::vec3(-10, 0., 0.), lt::vec3(0.), 50., 1.);
     app_data.sen_dir_light = new lt::Sensor(512, 512);
     app_data.int_dir_light = new lt::DirectIntegrator();
@@ -98,7 +100,7 @@ void AppInit(AppData& app_data) {
 }
 
 
-void brdf_slice(lt::Brdf* brdf, float th_i, float ph_i, lt::Sensor* sensor) {
+void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, lt::Sensor* sensor) {
     
 
 
@@ -137,16 +139,16 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::BeginChild("top pane", ImVec2(250, ImGui::GetContentRegionAvail().y*0.25),true);
             for (int i = 0; i < app_data.brdfs.size(); i++)
             {
-                if (ImGui::Selectable(app_data.brdfs[i]->name.c_str(), app_data.current_brdf_idx == i)) {
+                if (ImGui::Selectable( (app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
                     app_data.current_brdf_idx = i;
-                    app_data.scn_dir_light->objs[0]->brdf = app_data.brdfs[i];
+                    app_data.scn_dir_light->shapes[0]->brdf = app_data.brdfs[i];
                 }
             }
 
             ImGui::EndChild();
             ImGui::BeginChild("bottom pane", ImVec2(250, 0), true);
             
-            lt::Brdf* cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
+            std::shared_ptr<lt::Brdf> cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
 
             for (int i = 0; i < cur_brdf->params.count; i++) {
                 switch (cur_brdf->params.types[i])
@@ -198,7 +200,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("BRDF slice"))
                 {
 
-                    lt::Brdf* cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
+                    std::shared_ptr<lt::Brdf> cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
 
                     brdf_slice(cur_brdf, app_data.theta_i, app_data.phi_i, app_data.s_brdf_slice);
                     app_data.rs_brdf_slice.update_data();
@@ -221,7 +223,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                         if (ImPlot::BeginPlot("", "x", "y")) {
 
                             for (int i = 0; i < app_data.brdfs.size(); i++) {
-                                lt::Brdf* brdf = app_data.brdfs[i];
+                                std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
 
                                 static float xs[1001];
                                 for (int x = 0; x < 1001; x++) {
@@ -231,14 +233,14 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                     xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
 
                                 }
-                                ImPlot::PlotLine(brdf->name.c_str(), th.data(), xs, 1001);
+                                ImPlot::PlotLine(brdf->type.c_str(), th.data(), xs, 1001);
 
 
                             }
                             ImPlot::EndPlot();
                         }
 
-                        if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->name.c_str(), "x", "y")) {
+                        if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
 
 
                             static float r[1001];
@@ -308,7 +310,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.45);
             ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360);
             
-            lt::DirectionnalLight* dl = (lt::DirectionnalLight*)app_data.scn_dir_light->lights[0];
+            std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light->lights[0]) ;
             dl->dir = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i), std::cos(app_data.theta_i));
 
             ImGui::EndChild();

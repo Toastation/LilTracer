@@ -2,13 +2,11 @@
 
 namespace LT_NAMESPACE {
 
-Camera::Camera()
-{
-	std::cout << "Creation de la caméra" << std::endl;
-}
-
-Camera::~Camera()
-{
-}
+	//Factory<Camera>::CreatorRegistry& Factory<Camera>::registry() {
+	//	static Factory<Camera>::CreatorRegistry registry{
+	//		 {"PerspectiveCamera", std::make_shared<PerspectiveCamera>}
+	//	};
+	//	return registry;
+	//}
 
 }
