@@ -30,7 +30,6 @@ namespace LT_NAMESPACE {
 
 			if (it != registry().end()) {
 				Creator creator = it->second;
-				//return std::shared_ptr<T>(nullptr);
 				return creator(std::forward<Ts>(ts)...);
 			}
 

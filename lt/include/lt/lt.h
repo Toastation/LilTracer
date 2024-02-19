@@ -9,3 +9,4 @@
 #include <lt/sensor.h>
 #include <lt/sampler.h>
 #include <lt/integrator.h>
+#include <lt/io.h>

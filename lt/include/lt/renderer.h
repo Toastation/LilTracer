@@ -3,13 +3,18 @@
 #include <lt/sensor.h>
 #include <lt/sampler.h>
 #include <lt/camera.h>
-#include <lt/scene.h>
+#include <lt/integrator.h>
 
 namespace LT_NAMESPACE {
 	
-	template<typename T>
-	inline void render(Sensor<T> sensor, int spp) {
-		return;
-	}
+	class Renderer
+	{
+	public:
+		std::shared_ptr<Sampler> sampler;
+		std::shared_ptr<Sensor> sensor;
+		std::shared_ptr<Camera> camera;
+		std::shared_ptr<Integrator> integrator;
+	};
+
 
 }

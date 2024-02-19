@@ -10,29 +10,30 @@ namespace LT_NAMESPACE {
 class Camera : public Serializable
 {
 public:
-	Camera(const std::string& type) : type(type) {}
+	Camera(const std::string& type) : Serializable(type) {}
 
 	virtual Ray generate_ray(Float u, Float v) = 0;
-
-	std::string type;
 };
 
 class PerspectiveCamera : public Camera
 {
 public:
-	PerspectiveCamera(vec3 pos, vec3 center, float fov, float aspect) :
+	PerspectiveCamera() : 
 		Camera("PerspectiveCamera"),
-		pos(pos),
-		center(center),
-		fov(fov),
-		aspect(aspect)
+		pos(vec3(-1.,0.,0.)),
+		center(vec3(0)),
+		fov(40.),
+		aspect(1.)
 	{
-		view = glm::lookAt(pos, center, vec3(0.,1.,0.));
+		link_params();
+	}
+
+	void init() {
+		view = glm::lookAt(pos, center, vec3(0., 1., 0.));
 		inv_view = glm::inverse(view);
 		proj = glm::perspective((double)fov, (double)aspect, 0.0001, 1.);
 		inv_proj = glm::inverse(proj);
 	}
-	
 
 	// u in [-1 , 1]
 	// v in [-1 , 1]

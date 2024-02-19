@@ -21,12 +21,17 @@ static void glfw_error_callback(int error, const char* description)
 
 struct RenderSensor {
     GLuint id;
-    lt::Sensor * sensor = nullptr;
+    std::shared_ptr<lt::Sensor> sensor = nullptr;
     bool initialized = false;
 
-
+    GLuint fb_id;
 
     bool update_data() {
+
+       /* glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
+        glViewport(0, 0, sensor->w, sensor->h);*/
+
+
 
         if (initialized) {
             glBindTexture(GL_TEXTURE_2D, id);
@@ -38,6 +43,11 @@ struct RenderSensor {
 
     bool initialize()
     {
+        
+        //glGenFramebuffers(1, &fb_id);
+        //glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
+
+
         glGenTextures(1, &id);
         glBindTexture(GL_TEXTURE_2D, id);
 
@@ -46,6 +56,16 @@ struct RenderSensor {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+        
+        //glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id, 0);
+        //GLenum DrawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
+        //glDrawBuffers(1, DrawBuffers);
+        //
+        //// Always check that our framebuffer is ok
+        //if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        //    return false;
+        //
+        
         initialized = true;
         return true;
     }
@@ -59,7 +79,7 @@ struct RenderSensor {
 
 
 struct AppData {
-    lt::Sensor* s_brdf_slice;
+    std::shared_ptr<lt::Sensor> s_brdf_slice;
     RenderSensor rs_brdf_slice;
     int current_brdf_idx;
     std::vector<std::shared_ptr<lt::Brdf>> brdfs;
@@ -67,15 +87,23 @@ struct AppData {
     float phi_i = 0.;
 
     lt::Scene* scn_dir_light;
-    lt::Camera* cam_dir_light;
-    lt::Sensor* sen_dir_light;
+    std::shared_ptr<lt::Camera> cam_dir_light;
+    std::shared_ptr<lt::Sensor> sen_dir_light;
     lt::Sampler* sam_dir_light;
     lt::Integrator* int_dir_light;
     RenderSensor rsen_dir_light;
+
+    lt::Scene    scn_glo_ill;
+    lt::Renderer ren_glo_ill;
+    RenderSensor rsen_glo_ill;
 };
 
 void AppInit(AppData& app_data) {
-    app_data.s_brdf_slice = new lt::Sensor(256, 64);
+    lt::cornell_box(app_data.scn_glo_ill, app_data.ren_glo_ill);
+    app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
+    app_data.rsen_glo_ill.initialize();
+
+    app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
     app_data.current_brdf_idx = 0;
@@ -84,15 +112,25 @@ void AppInit(AppData& app_data) {
     app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("RoughConductor"));
     app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("TestBrdf"));
 
-    //app_data.scn_dir_light = lt::cornell_box();
     app_data.scn_dir_light = new lt::Scene();
     lt::vec3 ld = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i), std::cos(app_data.theta_i));
     app_data.scn_dir_light->lights.push_back(lt::Factory<lt::Light>::create("DirectionnalLight"));
     
-    std::shared_ptr<lt::Sphere> sph = std::make_shared<lt::Sphere>(lt::vec3(0), 1, app_data.brdfs[app_data.current_brdf_idx]);
+    std::shared_ptr<lt::Sphere> sph = std::make_shared<lt::Sphere>();
+    sph->pos = lt::vec3(0);
+    sph->rad = 1;
+    sph->brdf = app_data.brdfs[app_data.current_brdf_idx];
     app_data.scn_dir_light->shapes.push_back(sph);
-    app_data.cam_dir_light = new lt::PerspectiveCamera(lt::vec3(-10, 0., 0.), lt::vec3(0.), 50., 1.);
-    app_data.sen_dir_light = new lt::Sensor(512, 512);
+
+    std::shared_ptr<lt::PerspectiveCamera> cam = std::make_shared<lt::PerspectiveCamera>();
+    cam->pos = lt::vec3(-10., 0., 0.);
+    cam->center = lt::vec3(0.);
+    cam->fov = 50.;
+    cam->aspect = 1.;
+    cam->init();
+    
+    app_data.cam_dir_light = cam;
+    app_data.sen_dir_light = std::make_shared<lt::Sensor>(512, 512);
     app_data.int_dir_light = new lt::DirectIntegrator();
     app_data.sam_dir_light = new lt::Sampler();
     app_data.rsen_dir_light.sensor = app_data.sen_dir_light;
@@ -100,10 +138,8 @@ void AppInit(AppData& app_data) {
 }
 
 
-void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, lt::Sensor* sensor) {
+void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::shared_ptr<lt::Sensor> sensor) {
     
-
-
     std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, sensor->h);
     std::vector<float> ph = lt::linspace<float>(0, 2.  * lt::pi, sensor->w);
     
@@ -114,7 +150,6 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, lt::Sens
             sensor->data[y * sensor->w + x] = brdf->eval(wi, wo);
         }
     }
-
 
 }
 
@@ -163,7 +198,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
                     {
                         std::vector<float>* sh = (std::vector<float>*)cur_brdf->params.ptrs[i];
-                        ImGui::TableSetupColumn("Deg");
+                        ImGui::TableSetupColumn("num");
                         ImGui::TableSetupColumn("val");
                         ImGui::TableHeadersRow();
                         
@@ -294,6 +329,14 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
+                    app_data.ren_glo_ill.integrator->render(app_data.ren_glo_ill.camera, app_data.ren_glo_ill.sensor, app_data.scn_glo_ill, *app_data.ren_glo_ill.sampler);
+                    app_data.rsen_glo_ill.update_data();
+
+                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.id, ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
+                        ImPlot::EndPlot();
+                    }
+
                     ImGui::EndTabItem();
                 }
 
@@ -354,7 +397,7 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../../3rd_party/Roboto-Regular.ttf", 15.);
     
     ImGui::StyleColorsDark();
-
+    
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);

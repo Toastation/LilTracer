@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <math.h>
+#include <stdint.h>
 
 #define LT_NAMESPACE lt
 

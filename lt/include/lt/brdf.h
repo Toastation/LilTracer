@@ -12,7 +12,7 @@ namespace LT_NAMESPACE {
 	class Brdf : public Serializable
 	{
 	public:
-		Brdf(const std::string& type) : type(type) {};
+		Brdf(const std::string& type) : Serializable(type) {};
 		
 		virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
 		
@@ -20,7 +20,6 @@ namespace LT_NAMESPACE {
 		
 		virtual float pdf(vec3 w);
 
-		std::string type;
 	};
 
 

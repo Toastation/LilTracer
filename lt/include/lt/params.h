@@ -8,7 +8,9 @@ namespace LT_NAMESPACE {
 		{
 			FLOAT,
 			VEC3,
-			SH
+			SH,
+			PATH,
+			BRDF
 		};
 
 		int count = 0;

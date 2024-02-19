@@ -2,6 +2,4 @@
 
 namespace LT_NAMESPACE {
 
-
-
 }

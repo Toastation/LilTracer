@@ -1,5 +1,6 @@
 #pragma once
 #include <lt/lt_common.h>
+#include <lt/serialize.h>
 #include <lt/scene.h>
 #include <lt/camera.h>
 #include <lt/sensor.h>
@@ -7,53 +8,25 @@
 
 namespace LT_NAMESPACE {
 
-	class Integrator
+	class Integrator : public Serializable
 	{
 	public:
 		
-		~Integrator() {};
+		Integrator(const std::string& type) : Serializable(type) {};
 
-		
-		virtual void render(Camera* camera, Sensor* sensor, Scene& scene, Sampler& sampler) = 0;
+		virtual void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) = 0;
 
 	};
 
-	class PolarSlice : public Integrator {
-		PolarSlice() {};
-		void render(Camera* camera, Sensor* sensor, Scene& scene, Sampler& sampler) {
-
-		}
-	};
-
-	class NormalIntegrator : public Integrator 
-	{
-	public:
-		NormalIntegrator() {};
-
-		void render(Camera* camera, Sensor* sensor, Scene& scene, Sampler& sampler) {
-			std::vector<float> u = linspace<Float>(-1, 1, sensor->w);
-			std::vector<float> v = linspace<Float>(-1, 1, sensor->h);
-
-			for (int i = 0; i < u.size(); i++) {
-				for (int j = 0; j < v.size(); j++) {
-					Ray r = camera->generate_ray(u[i], v[j]);
-					SurfaceInteraction si;
-					if (scene.intersect(r, si)) {
-						sensor->data[j * sensor->h + i] = glm::abs(si.nor);
-					}
-
-				}
-			}
-
-		}
-	};
 
 	class DirectIntegrator : public Integrator
 	{
 	public:
-		DirectIntegrator() {};
+		DirectIntegrator() : Integrator("DirectIntegrator") {
+			link_params();
+		};
 
-		void render(Camera* camera, Sensor* sensor, Scene& scene, Sampler& sampler) {
+		void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
 			std::vector<float> u = linspace<Float>(-1, 1, sensor->w);
 			std::vector<float> v = linspace<Float>( 1,-1, sensor->h);
 
@@ -84,7 +57,8 @@ namespace LT_NAMESPACE {
 							vec3 wi = inv_tbn * (-r.d);
 							vec3 wo = inv_tbn * ld;
 
-							sensor->data[j * u.size() + i] = si.brdf->eval(wi, wo);
+							//sensor->data[j * u.size() + i] = si.brdf->eval(wi, wo);
+							sensor->add(i, j, si.brdf->eval(wi, wo));
 
 						}
 
@@ -92,6 +66,10 @@ namespace LT_NAMESPACE {
 					}
 				}
 			}
+
+		}
+	protected:
+		void link_params() {
 
 		}
 	};
