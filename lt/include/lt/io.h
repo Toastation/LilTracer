@@ -179,7 +179,7 @@ namespace LT_NAMESPACE {
 		return generate_from_json(R"(
 	   	{
 			"integrator": {
-				"type":"DirectIntegrator"
+				"type":"AOIntegrator"
 			},
 			"brdf": [
 				{"type":"Diffuse","name":"diff","albedo":[0.2,0.5,0.8]},
@@ -190,9 +190,8 @@ namespace LT_NAMESPACE {
 				{"type":"DirectionnalLight", "intensity" : 1.98, "dir" : [0.0, 1.0, 0.0] }
 			],
 			"shapes": [
-				{"type":"Sphere","brdf":"diff" , "pos":[0,0,0], "rad":1.0},
-				{"type":"Sphere","brdf":"rough", "pos":[1,0,0], "rad":1.0},
-				{"type":"Sphere","brdf":"diff" , "pos":[0,1,0], "rad":1.0},
+				{"type":"Sphere","brdf":"diff" , "pos":[0,0.5,0], "rad":1.0},
+				{"type":"Sphere","brdf":"diff" , "pos":[0,-0.5,0], "rad":1.0},
 				{"type":"Mesh","brdf":"rough", "filename" : "../file.obj"}
 			],
 			"sensor": {
@@ -201,10 +200,10 @@ namespace LT_NAMESPACE {
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
-				"fov" : 40,
+				"fov" : 30,
 				"aspect" : 1.5,
 				"center" : [0,0,0],
-				"pos" : [-5.0,0.0,0.0]
+				"pos" : [-2.0,0.0,0.0]
 			}
 		}
 		)", scn, ren);

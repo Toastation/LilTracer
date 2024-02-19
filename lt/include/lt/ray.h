@@ -20,6 +20,7 @@ namespace LT_NAMESPACE {
 	class Ray
 	{
 	public:
+		Ray() : o(vec3(0.)), d(vec3(0.)) {}
 		Ray(vec3 o, vec3 d) :
 			o(o),
 			d(d){}

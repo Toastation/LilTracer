@@ -20,7 +20,8 @@ static void glfw_error_callback(int error, const char* description)
 
 
 struct RenderSensor {
-    GLuint id;
+    GLuint spec_id;
+    GLuint count_id;
     std::shared_ptr<lt::Sensor> sensor = nullptr;
     bool initialized = false;
 
@@ -28,17 +29,19 @@ struct RenderSensor {
 
     bool update_data() {
 
-       /* glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
+        if (!initialized) {
+            return false;
+        }
+
+        /*glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
         glViewport(0, 0, sensor->w, sensor->h);*/
 
 
-
-        if (initialized) {
-            glBindTexture(GL_TEXTURE_2D, id);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->data.data());
-            return true;
-        }
-        return false;
+        glBindTexture(GL_TEXTURE_2D, spec_id);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->data.data());
+        glBindTexture(GL_TEXTURE_2D, count_id);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RED, GL_UNSIGNED_SHORT, sensor->count.data());
+        return true;
     }
 
     bool initialize()
@@ -48,8 +51,16 @@ struct RenderSensor {
         //glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
 
 
-        glGenTextures(1, &id);
-        glBindTexture(GL_TEXTURE_2D, id);
+        glGenTextures(1, &spec_id);
+        glBindTexture(GL_TEXTURE_2D, spec_id);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glGenTextures(1, &count_id);
+        glBindTexture(GL_TEXTURE_2D, count_id);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -72,7 +83,8 @@ struct RenderSensor {
 
     ~RenderSensor() {
         if (initialized) {
-            glDeleteTextures(1, &id);
+            glDeleteTextures(1, &spec_id);
+            glDeleteTextures(1, &count_id);
         }
     }
 };
@@ -123,7 +135,7 @@ void AppInit(AppData& app_data) {
     app_data.scn_dir_light->shapes.push_back(sph);
 
     std::shared_ptr<lt::PerspectiveCamera> cam = std::make_shared<lt::PerspectiveCamera>();
-    cam->pos = lt::vec3(-10., 0., 0.);
+    cam->pos = lt::vec3(10., 0., 0.);
     cam->center = lt::vec3(0.);
     cam->fov = 50.;
     cam->aspect = 1.;
@@ -242,7 +254,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                  
                     if(ImPlot::BeginPlot("##image","","",ImVec2(-1,0),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         
-                        ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.id, ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
+                        ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.spec_id, ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
                         ImPlot::EndPlot();
                     }
                     ImGui::EndTabItem();
@@ -320,7 +332,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id, ImVec2(0, 0), ImVec2(app_data.sen_dir_light->w, app_data.sen_dir_light->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.spec_id, ImVec2(0, 0), ImVec2(app_data.sen_dir_light->w, app_data.sen_dir_light->h));
                         ImPlot::EndPlot();
                     }
 
@@ -333,7 +345,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rsen_glo_ill.update_data();
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.id, ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.spec_id, ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
                         ImPlot::EndPlot();
                     }
 
@@ -354,7 +366,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360);
             
             std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light->lights[0]) ;
-            dl->dir = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i), std::cos(app_data.theta_i));
+            dl->dir = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
 
             ImGui::EndChild();
 
