@@ -118,7 +118,7 @@ namespace LT_NAMESPACE {
 						Ray r_shadow;
 						r_shadow.o = si.pos - 0.001f * r.d;
 						
-						int nSample = 10;
+						int nSample = 1;
 						Spectrum val(0.);
 						for (int l = 0; l < nSample; l++) {
 

@@ -201,8 +201,8 @@ namespace LT_NAMESPACE {
 				{"type":"Mesh","brdf":"diff", "filename" : "C:/Users/lucas/Documents/LilTracer/data/cornell.obj"}
 			],
 			"sensor": {
-				"width" : 108,
-				"height" : 72
+				"width" : 1080,
+				"height" : 720
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
@@ -232,8 +232,8 @@ namespace LT_NAMESPACE {
 				{"type":"Sphere","brdf":"sphere_brdf" , "pos":[0,0,0], "rad":1.0}
 			],
 			"sensor": {
-				"width" : 100,
-				"height" : 100
+				"width" : 512,
+				"height" : 512
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
