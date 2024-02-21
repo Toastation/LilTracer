@@ -12,6 +12,10 @@ namespace LT_NAMESPACE {
 class Scene
 {
 public:
+	Scene() {
+		
+	}
+
 
 	bool intersect(const Ray& r, SurfaceInteraction& si) {
 
@@ -19,8 +23,8 @@ public:
 		
 		bool has_intersect = false;
 
-		for (int i = 0; i < shapes.size(); i++) {
-			if (shapes[i]->intersect(r, si_t) && si_t.t < si.t) {
+		for (int i = 0; i < geometries.size(); i++) {
+			if (geometries[i]->intersect(r, si_t) && si_t.t < si.t) {
 				si = si_t;
 				has_intersect = true;
 			}
@@ -30,11 +34,11 @@ public:
 		
 	}
 
-	void init() {
-	}
+	//RTCDevice device;
+	//RTCScene scene;
 
 
-	std::vector<std::shared_ptr<Shape>> shapes;
+	std::vector<std::shared_ptr<Geometry>> geometries;
 	std::vector<std::shared_ptr<Light>> lights;
 	std::vector<std::shared_ptr<Brdf>>  brdfs;
 };

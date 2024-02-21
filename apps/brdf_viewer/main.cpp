@@ -132,7 +132,7 @@ void AppInit(AppData& app_data) {
     sph->pos = lt::vec3(0);
     sph->rad = 1;
     sph->brdf = app_data.brdfs[app_data.current_brdf_idx];
-    app_data.scn_dir_light->shapes.push_back(sph);
+    app_data.scn_dir_light->geometries.push_back(sph);
 
     std::shared_ptr<lt::PerspectiveCamera> cam = std::make_shared<lt::PerspectiveCamera>();
     cam->pos = lt::vec3(5., 0., 0.);
@@ -188,7 +188,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             {
                 if (ImGui::Selectable( (app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
                     app_data.current_brdf_idx = i;
-                    app_data.scn_dir_light->shapes[0]->brdf = app_data.brdfs[i];
+                    app_data.scn_dir_light->geometries[0]->brdf = app_data.brdfs[i];
                 }
             }
 

@@ -2,8 +2,8 @@
 
 namespace LT_NAMESPACE {
 
-	Factory<Shape>::CreatorRegistry& Factory<Shape>::registry() {
-		static Factory<Shape>::CreatorRegistry registry{
+	Factory<Geometry>::CreatorRegistry& Factory<Geometry>::registry() {
+		static Factory<Geometry>::CreatorRegistry registry{
 			 {"Mesh"  , std::make_shared<Mesh>}
 			,{"Sphere", std::make_shared<Sphere>}
 		};

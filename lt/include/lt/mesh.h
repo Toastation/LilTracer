@@ -8,20 +8,20 @@
 
 namespace LT_NAMESPACE {
 
-	class Shape : public Serializable
+	class Geometry : public Serializable
 	{
 	public:
-		Shape(const std::string& type) : Serializable(type) {};
+		Geometry(const std::string& type) : Serializable(type) {};
 
 		virtual bool intersect(Ray r, SurfaceInteraction& si) = 0;
 		std::shared_ptr<Brdf> brdf;
 	};
 
 
-	class Mesh : public Shape
+	class Mesh : public Geometry
 	{
 	public:
-		Mesh() : Shape("Mesh") {
+		Mesh() : Geometry("Mesh") {
 			link_params();
 		};
 
@@ -138,11 +138,11 @@ namespace LT_NAMESPACE {
 
 	};
 
-	class Sphere : public Shape
+	class Sphere : public Geometry
 	{
 	public:
 		Sphere() :
-			Shape("Sphere"),
+			Geometry("Sphere"),
 			pos(vec3(0.)),
 			rad(1.)
 		{

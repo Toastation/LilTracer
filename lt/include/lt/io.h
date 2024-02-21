@@ -151,24 +151,24 @@ namespace LT_NAMESPACE {
 			std::cerr << "Abort generate_from_json, cause : Missing light" << std::endl;
 		}
 
-		// Parse Shapes
-		if (json_scn.contains("shapes")) {
-			for (const auto& json_shape : json_scn["shapes"]) {
-				std::cout << json_shape << std::endl;
+		// Parse Geometrys
+		if (json_scn.contains("geometries")) {
+			for (const auto& json_geometry : json_scn["geometries"]) {
+				std::cout << json_geometry << std::endl;
 
-				std::shared_ptr<Shape> shape = Factory<Shape>::create(json_shape["type"]);
-				if (!shape)
+				std::shared_ptr<Geometry> geometry = Factory<Geometry>::create(json_geometry["type"]);
+				if (!geometry)
 					return false;
 
-				set_params(json_shape, shape->params, brdf_ref);
-				shape->init();
+				set_params(json_geometry, geometry->params, brdf_ref);
+				geometry->init();
 
-				scn.shapes.push_back(shape);
+				scn.geometries.push_back(geometry);
 
 			}
 		}
 		else {
-			std::cerr << "Abort generate_from_json, cause : Missing shapes" << std::endl;
+			std::cerr << "Abort generate_from_json, cause : Missing geometries" << std::endl;
 		}
 
 		return true;
@@ -189,7 +189,7 @@ namespace LT_NAMESPACE {
 				{"type":"DirectionnalLight", "intensity" : 1.25, "dir" : [1.0, 0.0, 0.0] },
 				{"type":"DirectionnalLight", "intensity" : 1.98, "dir" : [0.0, 1.0, 0.0] }
 			],
-			"shapes": [
+			"geometries": [
 				{"type":"Mesh","brdf":"diff", "filename" : "C:/Users/lucas/Documents/LilTracer/data/cornell.obj"}
 			],
 			"sensor": {
