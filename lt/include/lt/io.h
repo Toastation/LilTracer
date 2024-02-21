@@ -190,9 +190,7 @@ namespace LT_NAMESPACE {
 				{"type":"DirectionnalLight", "intensity" : 1.98, "dir" : [0.0, 1.0, 0.0] }
 			],
 			"shapes": [
-				{"type":"Sphere","brdf":"diff" , "pos":[0,0.5,0], "rad":1.0},
-				{"type":"Sphere","brdf":"diff" , "pos":[0,-0.5,0], "rad":1.0},
-				{"type":"Mesh","brdf":"rough", "filename" : "../file.obj"}
+				{"type":"Mesh","brdf":"diff", "filename" : "C:/Users/lucas/Documents/LilTracer/data/cornell.obj"}
 			],
 			"sensor": {
 				"width" : 1080,
@@ -200,13 +198,14 @@ namespace LT_NAMESPACE {
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
-				"fov" : 30,
+				"fov" : 40,
 				"aspect" : 1.5,
-				"center" : [0,0,0],
-				"pos" : [-2.0,0.0,0.0]
+				"center" : [0.0,1.0,0.0],
+				"pos" : [0.0,1.0,4.0]
 			}
 		}
 		)", scn, ren);
+
 	}
 
 

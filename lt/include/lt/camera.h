@@ -31,7 +31,7 @@ public:
 	void init() {
 		view = glm::lookAt(pos, center, vec3(0., 1., 0.));
 		inv_view = glm::inverse(view);
-		proj = glm::perspective((double)fov, (double)aspect, 0.0001, 1.);
+		proj = glm::perspective((double)fov*pi/180.f, (double)aspect, 0.0001, 1.);
 		inv_proj = glm::inverse(proj);
 	}
 

@@ -135,9 +135,9 @@ void AppInit(AppData& app_data) {
     app_data.scn_dir_light->shapes.push_back(sph);
 
     std::shared_ptr<lt::PerspectiveCamera> cam = std::make_shared<lt::PerspectiveCamera>();
-    cam->pos = lt::vec3(10., 0., 0.);
+    cam->pos = lt::vec3(5., 0., 0.);
     cam->center = lt::vec3(0.);
-    cam->fov = 50.;
+    cam->fov = 30.;
     cam->aspect = 1.;
     cam->init();
     

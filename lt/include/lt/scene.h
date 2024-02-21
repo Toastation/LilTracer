@@ -30,6 +30,9 @@ public:
 		
 	}
 
+	void init() {
+	}
+
 
 	std::vector<std::shared_ptr<Shape>> shapes;
 	std::vector<std::shared_ptr<Light>> lights;
