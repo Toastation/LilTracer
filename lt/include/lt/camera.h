@@ -38,7 +38,6 @@ public:
 	// u in [-1 , 1]
 	// v in [-1 , 1]
 	Ray generate_ray(Float u, Float v) {		
-
 		glm::vec4 d_eye = inv_proj * glm::vec4(u, v, -1., 1.);
 		d_eye.w = 0.;
 

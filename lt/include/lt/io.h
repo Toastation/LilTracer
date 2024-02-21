@@ -64,7 +64,13 @@ namespace LT_NAMESPACE {
 	static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren) {
 		std::map<std::string, std::shared_ptr<Brdf>> brdf_ref;
 
-		json json_scn = json::parse(str);
+		json json_scn;
+		try {
+			json_scn = json::parse(str);
+		}
+		catch (const json::exception& e) {
+			std::cerr << e.what() << std::endl;
+		}
 
 		ren.sampler = std::make_shared<Sampler>();
 
@@ -171,6 +177,8 @@ namespace LT_NAMESPACE {
 			std::cerr << "Abort generate_from_json, cause : Missing geometries" << std::endl;
 		}
 
+		scn.init_rtc();
+
 		return true;
 
 	}
@@ -193,8 +201,8 @@ namespace LT_NAMESPACE {
 				{"type":"Mesh","brdf":"diff", "filename" : "C:/Users/lucas/Documents/LilTracer/data/cornell.obj"}
 			],
 			"sensor": {
-				"width" : 1080,
-				"height" : 720
+				"width" : 108,
+				"height" : 72
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
@@ -202,6 +210,37 @@ namespace LT_NAMESPACE {
 				"aspect" : 1.5,
 				"center" : [0.0,1.0,0.0],
 				"pos" : [0.0,1.0,4.0]
+			}
+		}
+		)", scn, ren);
+
+	}
+
+	inline bool dir_light(Scene& scn, Renderer& ren) {
+		return generate_from_json(R"(
+	   	{
+			"integrator": {
+				"type":"DirectIntegrator"
+			},
+			"brdf": [
+				{"type":"Diffuse","name":"sphere_brdf","albedo":[0.2,0.5,0.8]}
+			],
+			"light": [
+				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [1.0, 0.0, 0.0] }
+			],
+			"geometries": [
+				{"type":"Sphere","brdf":"sphere_brdf" , "pos":[0,0,0], "rad":1.0}
+			],
+			"sensor": {
+				"width" : 100,
+				"height" : 100
+			},
+			"camera": {
+				"type":"PerspectiveCamera",
+				"fov" : 30,
+				"aspect" : 1.0,
+				"center" : [0.0,0.0,0.0],
+				"pos" : [5.0,0.0,0.0]
 			}
 		}
 		)", scn, ren);

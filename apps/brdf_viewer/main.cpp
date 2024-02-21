@@ -98,12 +98,17 @@ struct AppData {
     float theta_i = 0.5;
     float phi_i = 0.;
 
-    lt::Scene* scn_dir_light;
-    std::shared_ptr<lt::Camera> cam_dir_light;
-    std::shared_ptr<lt::Sensor> sen_dir_light;
-    lt::Sampler* sam_dir_light;
-    lt::Integrator* int_dir_light;
+    //lt::Scene* scn_dir_light;
+    //std::shared_ptr<lt::Camera> cam_dir_light;
+    //std::shared_ptr<lt::Sensor> sen_dir_light;
+    //lt::Sampler* sam_dir_light;
+    //lt::Integrator* int_dir_light;
+    //RenderSensor rsen_dir_light;
+
+    lt::Scene    scn_dir_light;
+    lt::Renderer ren_dir_light;
     RenderSensor rsen_dir_light;
+
 
     lt::Scene    scn_glo_ill;
     lt::Renderer ren_glo_ill;
@@ -111,6 +116,17 @@ struct AppData {
 };
 
 void AppInit(AppData& app_data) {
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("RoughConductor"));
+    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("TestBrdf"));
+    app_data.current_brdf_idx = 0;
+    
+    
+    lt::dir_light(app_data.scn_dir_light, app_data.ren_dir_light);
+    app_data.rsen_dir_light.sensor = app_data.ren_dir_light.sensor;
+    app_data.rsen_dir_light.initialize();
+    app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[app_data.current_brdf_idx];
+
     lt::cornell_box(app_data.scn_glo_ill, app_data.ren_glo_ill);
     app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
     app_data.rsen_glo_ill.initialize();
@@ -118,35 +134,6 @@ void AppInit(AppData& app_data) {
     app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
-    app_data.current_brdf_idx = 0;
-
-    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
-    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("RoughConductor"));
-    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("TestBrdf"));
-
-    app_data.scn_dir_light = new lt::Scene();
-    lt::vec3 ld = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i), std::cos(app_data.theta_i));
-    app_data.scn_dir_light->lights.push_back(lt::Factory<lt::Light>::create("DirectionnalLight"));
-    
-    std::shared_ptr<lt::Sphere> sph = std::make_shared<lt::Sphere>();
-    sph->pos = lt::vec3(0);
-    sph->rad = 1;
-    sph->brdf = app_data.brdfs[app_data.current_brdf_idx];
-    app_data.scn_dir_light->geometries.push_back(sph);
-
-    std::shared_ptr<lt::PerspectiveCamera> cam = std::make_shared<lt::PerspectiveCamera>();
-    cam->pos = lt::vec3(5., 0., 0.);
-    cam->center = lt::vec3(0.);
-    cam->fov = 30.;
-    cam->aspect = 1.;
-    cam->init();
-    
-    app_data.cam_dir_light = cam;
-    app_data.sen_dir_light = std::make_shared<lt::Sensor>(512, 512);
-    app_data.int_dir_light = new lt::DirectIntegrator();
-    app_data.sam_dir_light = new lt::Sampler();
-    app_data.rsen_dir_light.sensor = app_data.sen_dir_light;
-    app_data.rsen_dir_light.initialize();
 }
 
 
@@ -164,8 +151,6 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
     }
 
 }
-
-
 
 
 
@@ -188,7 +173,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             {
                 if (ImGui::Selectable( (app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
                     app_data.current_brdf_idx = i;
-                    app_data.scn_dir_light->geometries[0]->brdf = app_data.brdfs[i];
+                    app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[i];
                 }
             }
 
@@ -328,11 +313,11 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
                     
-                    app_data.int_dir_light->render(app_data.cam_dir_light, app_data.sen_dir_light, *app_data.scn_dir_light, *app_data.sam_dir_light);
+                    app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.spec_id, ImVec2(0, 0), ImVec2(app_data.sen_dir_light->w, app_data.sen_dir_light->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.spec_id, ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
                         ImPlot::EndPlot();
                     }
 
@@ -365,7 +350,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.45);
             ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360);
             
-            std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light->lights[0]) ;
+            std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light.lights[0]) ;
             dl->dir = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
 
             ImGui::EndChild();
@@ -406,7 +391,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    //io.Fonts->AddFontFromFileTTF("../../../3rd_party/Roboto-Regular.ttf", 15.);
+    io.Fonts->AddFontFromFileTTF("../../../3rd_party/Roboto-Regular.ttf", 15.);
     
     ImGui::StyleColorsDark();
     
@@ -415,7 +400,8 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Init(glsl_version);
 
 
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.f, 0.f, 0.0f, 1.00f);
+    //ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
    
 
     AppData app_data;
