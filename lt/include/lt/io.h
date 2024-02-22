@@ -198,7 +198,7 @@ namespace LT_NAMESPACE {
 				{"type":"DirectionnalLight", "intensity" : 1.98, "dir" : [0.0, 1.0, 0.0] }
 			],
 			"geometries": [
-				{"type":"Mesh","brdf":"diff", "filename" : "C:/Users/lucas/Documents/LilTracer/data/cornell.obj"}
+				{"type":"Mesh","brdf":"diff", "filename" : "../../../data/cornell.obj"}
 			],
 			"sensor": {
 				"width" : 1080,
