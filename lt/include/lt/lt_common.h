@@ -64,5 +64,20 @@ namespace LT_NAMESPACE{
 	inline Float square_to_cosine_hemisphere_pdf(vec3 w) {
 		return w[2] / pi;
 	}
+
+	inline void orthonormal_basis(const vec3& n, vec3& t, vec3& b) {
+		if (n.z < -0.999999)
+		{
+			t = vec3(0, -1, 0);
+			b = vec3(-1, 0, 0);
+		}
+		else
+		{
+			float c1 = 1. / (1. + n.z);
+			float c2 = -n.x * n.y * c1;
+			t = glm::normalize(vec3(1.f - n.x * n.x * c1, c2, -n.x));
+			b = glm::normalize(vec3(c2, 1.f - n.y * n.y * c1, -n.y));
+		}
+	}
 	
 }

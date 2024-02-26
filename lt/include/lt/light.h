@@ -22,6 +22,9 @@ namespace LT_NAMESPACE {
 			return dir;
 		}
 		
+		void init() {
+			dir = glm::normalize(dir);
+		}
 
 		Float intensity = 0.5;
 		vec3  dir       = vec3(1,0,0);

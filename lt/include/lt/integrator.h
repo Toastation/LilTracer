@@ -14,8 +14,53 @@ namespace LT_NAMESPACE {
 		
 		Integrator(const std::string& type) : Serializable(type) {};
 
-		virtual void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) = 0;
 
+		virtual void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+			for (int h = 0; h < sensor->h; h++) {
+				for (int w = 0; w < sensor->w; w++) {
+
+					float jw = (2. * sampler.next_float()) / (float)sensor->w;
+					float jh = (2. * sampler.next_float()) / (float)sensor->h;
+
+					Ray r = camera->generate_ray(sensor->u[w] + jw, sensor->v[h] + jh);
+					Spectrum s;
+					
+					render_pixel(r, s, scene, sampler);
+
+							
+					sensor->add(w, h, s);
+					
+				}
+			}
+		};
+		virtual void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) = 0;
+		
+		Spectrum uniform_sample_one_light(Ray& r, SurfaceInteraction& si, Scene& scene, Sampler& sampler) {
+			int n_light = scene.lights.size();
+
+			if (n_light == 0)
+				return Spectrum(0.);
+
+			int light_idx = std::min((int)(sampler.next_float() * n_light), n_light - 1);
+			Float light_pdf = (Float)(1.) / n_light;
+
+			const std::shared_ptr<Light>& light = scene.lights[light_idx];
+
+			return estimate_direct(r, si, light, scene, sampler) / light_pdf;
+		}
+
+		Spectrum estimate_direct(Ray& r, SurfaceInteraction& si, const std::shared_ptr<Light>& light, Scene& scene, Sampler& sampler) {
+
+			vec3 l = light->sample_light_direction();
+			vec3 wo = si.to_local(-l);
+			vec3 wi = si.to_local(-r.d);
+			
+			Ray rs(si.pos - r.d * 0.0001f, -l);
+			if(!scene.intersect(rs))
+				return si.brdf->eval(wi, wo);
+			return Spectrum(0.);
+		}
+	
 	};
 
 
@@ -26,52 +71,85 @@ namespace LT_NAMESPACE {
 			link_params();
 		};
 
-		void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
-			for (int j = 0; j < sensor->h; j++) {
-				for (int i = 0; i < sensor->w; i++) {
+		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
+			
+			SurfaceInteraction si;
+			
+			s = Spectrum(0.);
 
-					float jx = (2. * sampler.next_float()) / (float)sensor->w;
-					float jy = (2. * sampler.next_float()) / (float)sensor->h;
+			if (scene.intersect(r, si)) {
 
-					Ray r = camera->generate_ray(sensor->u[i] + jx, sensor->v[j] + jy);
-					SurfaceInteraction si;
-					
-					if (scene.intersect(r, si)) {
-
-						if (!si.brdf)
-							break;
-						
-						vec3 n = si.nor;
-						vec3 t = glm::normalize(glm::cross(n, vec3(0., 1., 0.)));
-						t = glm::normalize(glm::cross(t, n));
-						vec3 b = glm::normalize(glm::cross(t, n));
-						glm::mat3 tbn = glm::mat3(t, b, n);
-						glm::mat3 inv_tbn = glm::transpose(tbn);
-
-						vec3 wi = inv_tbn * (-r.d);
-					
-						vec3 rad = Spectrum(0.);
-						for (int l = 0; l < scene.lights.size(); l++) {
-
-							vec3 ld = scene.lights[l]->sample_light_direction();
-							
-							vec3 wo = inv_tbn * ld;
-
-							rad += si.brdf->eval(wi, wo);
-							//sensor->data[j * u.size() + i] = si.brdf->eval(wi, wo);
-							
-
-						}
-						sensor->set(i, j, rad);
-
-					}
+				if (!si.brdf) {
+					r = Ray(si.pos + r.d * 0.00001f, r.d);
+					render_pixel(r, s, scene, sampler);
+					return;
 				}
+				
+				s += uniform_sample_one_light(r, si, scene, sampler);
 			}
-
 		}
 	protected:
 		void link_params() {
 
+		}
+	};
+
+	class PathIntegrator : public Integrator
+	{
+	public:
+		PathIntegrator() : Integrator("PathIntegrator"),
+			depth(32)
+		{
+			link_params();
+		};
+
+
+		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
+
+			Spectrum attenuation(1.);
+			s = Spectrum(0.);
+
+			for (int d = 0; d < depth; d++) {
+
+				SurfaceInteraction si;
+				if (scene.intersect(r, si)) {
+
+					if (!si.brdf) {
+						r = Ray(si.pos + r.d * 0.00001f, r.d);
+						d--;
+						continue;
+					}
+					
+					vec3 p = si.pos - r.d * 0.00001f;
+
+					// Compute Light contrib
+					s += attenuation * uniform_sample_one_light(r,si,scene,sampler);
+					
+					// Compute BRDF  contrib
+					vec3 wi = si.to_local(-r.d);
+					vec3 wo = si.brdf->sample(wi, sampler);
+					Float wo_pdf = si.brdf->pdf(wo);
+					Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
+					attenuation *= brdf_cos_weighted / wo_pdf;
+
+					r = Ray(p, si.to_world(wo) );
+				}
+				else 
+				{
+					float a = 0.5 * (r.d.y + 1.0);
+					Spectrum bg_color = ((1.0f - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
+					s += attenuation * bg_color ;
+					break;
+				}
+			}
+
+		}
+		
+
+		uint32_t depth;
+	protected:
+		void link_params() {
+			
 		}
 	};
 
@@ -82,69 +160,31 @@ namespace LT_NAMESPACE {
 			link_params();
 		};
 
-		void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
 
-			for (int j = 0; j < sensor->h; j++) {
-				for (int i = 0; i < sensor->w; i++) {
+			SurfaceInteraction si;
+			
+			s = Spectrum(0.);
 
-					float jx = (2. * sampler.next_float()) / (float)sensor->w;
-					float jy = (2. * sampler.next_float()) / (float)sensor->h;
+			if (scene.intersect(r, si)) {
 
-					Ray r = camera->generate_ray(sensor->u[i] + jx, sensor->v[j] + jy);
-					SurfaceInteraction si;
-
-					if (scene.intersect(r, si)) {
-
-						vec3 n = si.nor;
-						vec3 t, b;
+				Ray rs;
+				rs.o = si.pos - 0.001f * r.d;
 						
-						if (n.z < -0.999999)
-						{
-							t = vec3(0, -1, 0);
-							b = vec3(-1, 0, 0);
-						}
-						else
-						{
-							float c1 = 1. / (1. + n.z);
-							float c2 = -n.x * n.y * c1;
-							t = glm::normalize(vec3(1.f - n.x * n.x * c1, c2, -n.x));
-							b = glm::normalize(vec3(c2, 1.f - n.y * n.y * c1, -n.y));
-						}
-						
+				int nSample = 1;
+				
+				for (int l = 0; l < nSample; l++) {
 
-						glm::mat3 tbn = glm::mat3(t, b, n);
-						glm::mat3 inv_tbn = glm::transpose(tbn);
+					vec3 wi = lt::square_to_uniform_hemisphere(sampler.next_float(), sampler.next_float());
 
-						Ray r_shadow;
-						r_shadow.o = si.pos - 0.001f * r.d;
-						
-						int nSample = 1;
-						Spectrum val(0.);
-						for (int l = 0; l < nSample; l++) {
+					rs.d = si.to_world(wi);
 
-							vec3 wi = lt::square_to_uniform_hemisphere(sampler.next_float(), sampler.next_float());
+					if (!scene.intersect(rs))
+						s += Spectrum(1.) / (float(nSample));
 
-							// Transform wi from local frame to world space.
-							r_shadow.d = vec3(t.x * wi.x + b.x * wi.y + n.x * wi.z,
-								t.y * wi.x + b.y * wi.y + n.y * wi.z,
-								t.z * wi.x + b.z * wi.y + n.z * wi.z);
-
-							//r_shadow.d = tbn * wi;
-
-							SurfaceInteraction si_shadow;
-							
-							if (!scene.intersect(r_shadow, si_shadow))
-								val += Spectrum(1.) / (float(nSample));
-
-						}
-
-						//sensor->set(i, j, glm::abs(si.nor));
-						//sensor->set(i, j, (si.pos));
-						sensor->set(i, j, val);
-						//sensor->set(i, j, vec3(si.t)*0.1f);
-
-					}
 				}
+
+					
 			}
 
 		}

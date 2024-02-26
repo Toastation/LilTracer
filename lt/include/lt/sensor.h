@@ -17,7 +17,8 @@ namespace LT_NAMESPACE {
 		
 		void add(uint16_t x, uint16_t y, Spectrum s) {
 			uint32_t idx = y * w + x;
-			data[idx] += s;
+			//data[idx] += s;
+			data[idx] = (data[idx] * Spectrum(count[idx]) + s) / Spectrum(count[idx] + 1);
 			count[idx]++;
 		}
 

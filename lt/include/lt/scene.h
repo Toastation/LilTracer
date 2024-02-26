@@ -16,7 +16,33 @@ public:
 	}
 
 
-	bool intersect(Ray r, SurfaceInteraction& si) {
+	//bool intersect16(RTCRayHit16 rhs, SurfaceInteraction* si, int* valid) {
+
+	//	RTCIntersectContext context;
+	//	rtcInitIntersectContext(&context);
+
+	//	rtcIntersect16(valid,scene, & context, &rhs);
+
+	//	for (int i = 0; i < 16; i++) {
+	//		if (rhs.hit.geomID[i] != RTC_INVALID_GEOMETRY_ID) {
+	//			valid[i] = -1;
+
+	//			std::shared_ptr<Geometry> geom = geometries[rhs.hit.geomID[i]];
+
+	//			si[i].t = rhs.ray.tfar[i];
+	//			si[i].brdf = geom->brdf;
+	//			si[i].pos = vec3(rhs.ray.org_x[i] + si[i].t * rhs.ray.dir_x[i], rhs.ray.org_y[i] + si[i].t * rhs.ray.dir_y[i], rhs.ray.org_z[i] + si[i].t * rhs.ray.dir_z[i]);
+	//			si[i].nor = vec3(rhs.hit.Ng_x[i], rhs.hit.Ng_y[i], rhs.hit.Ng_z[i]);
+	//			//si[i].nor = geom->get_normal(rayhit, si.pos);
+	//		}
+	//		else {
+	//			valid[i] = 0;
+	//		}
+	//	}
+
+	//}
+
+	bool intersect(const Ray& r, SurfaceInteraction& si) {
 		
 		RTCRayHit rayhit;
 		rayhit.ray.org_x = r.o.x; rayhit.ray.org_y = r.o.y; rayhit.ray.org_z = r.o.z;
@@ -24,9 +50,6 @@ public:
 		rayhit.ray.tnear = 0.f;
 		rayhit.ray.tfar = std::numeric_limits<float>::infinity();
 		rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-
-		RTCIntersectContext context;
-		rtcInitIntersectContext(&context);
 
 		rtcIntersect1(scene, &context, &rayhit);
 
@@ -40,10 +63,30 @@ public:
 			//si.nor = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z);
 			si.nor = geom->get_normal(rayhit, si.pos);
 
+			si.finalize();
 			return true;
 		}
 
 		return false;
+	}
+
+	bool intersect(const Ray& r) {
+		
+		RTCRay ray;
+		ray.org_x = r.o.x; ray.org_y = r.o.y; ray.org_z = r.o.z;
+		ray.dir_x = r.d.x; ray.dir_y = r.d.y; ray.dir_z = r.d.z;
+		ray.tnear = 0.f;
+		ray.tfar = std::numeric_limits<float>::infinity();
+		ray.flags = 0;
+
+		rtcOccluded1(scene, &context, &ray);
+
+		if (ray.tfar < 0.) {
+			return true;
+		}
+
+		return false;
+
 	}
 
 	void init_rtc() {
@@ -58,10 +101,14 @@ public:
 		}
 
 		rtcCommitScene(scene);
+
+
+		rtcInitIntersectContext(&context);
 	}
 
 	RTCDevice device;
 	RTCScene scene;
+	RTCIntersectContext context;
 
 	std::vector<std::shared_ptr<Geometry>> geometries;
 	std::vector<std::shared_ptr<Light>> lights;

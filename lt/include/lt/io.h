@@ -194,8 +194,8 @@ namespace LT_NAMESPACE {
 				{"type":"RoughConductor","name":"rough","albedo":[0.2,0.5,0.8],"alpha_x":0.5,"alpha_x":0.15}
 			],
 			"light": [
-				{"type":"DirectionnalLight", "intensity" : 1.25, "dir" : [1.0, 0.0, 0.0] },
-				{"type":"DirectionnalLight", "intensity" : 1.98, "dir" : [0.0, 1.0, 0.0] }
+				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [-0.0, -1.0, -1.0] },
+				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [-1.0, -1.0, -1.0] }
 			],
 			"geometries": [
 				{"type":"Mesh","brdf":"diff", "filename" : "../../../data/cornell.obj"}
@@ -226,7 +226,7 @@ namespace LT_NAMESPACE {
 				{"type":"Diffuse","name":"sphere_brdf","albedo":[0.2,0.5,0.8]}
 			],
 			"light": [
-				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [1.0, 0.0, 0.0] }
+				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [-1.0, 0.0, 0.0] }
 			],
 			"geometries": [
 				{"type":"Sphere","brdf":"sphere_brdf" , "pos":[0,0,0], "rad":1.0}

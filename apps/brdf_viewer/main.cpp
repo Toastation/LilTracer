@@ -98,17 +98,9 @@ struct AppData {
     float theta_i = 0.5;
     float phi_i = 0.;
 
-    //lt::Scene* scn_dir_light;
-    //std::shared_ptr<lt::Camera> cam_dir_light;
-    //std::shared_ptr<lt::Sensor> sen_dir_light;
-    //lt::Sampler* sam_dir_light;
-    //lt::Integrator* int_dir_light;
-    //RenderSensor rsen_dir_light;
-
     lt::Scene    scn_dir_light;
     lt::Renderer ren_dir_light;
     RenderSensor rsen_dir_light;
-
 
     lt::Scene    scn_glo_ill;
     lt::Renderer ren_glo_ill;

@@ -3,12 +3,12 @@
 namespace LT_NAMESPACE {
 
 
-vec3 Brdf::sample(vec3 wi, vec3 wo, Sampler s) {
+vec3 Brdf::sample(const vec3& wi, Sampler& s) {
 	return square_to_uniform_hemisphere(s.next_float(), s.next_float());
 }
 
 float Brdf::pdf(vec3 w) {
-	return square_to_cosine_hemisphere_pdf(w);
+	return square_to_uniform_hemisphere_pdf();
 }
 
 

@@ -16,7 +16,7 @@ namespace LT_NAMESPACE {
 		
 		virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
 		
-		virtual vec3 sample(vec3 wi, vec3 wo, Sampler sampler);
+		virtual vec3 sample(const vec3& wi, Sampler& sampler);
 		
 		virtual float pdf(vec3 w);
 
@@ -31,7 +31,7 @@ namespace LT_NAMESPACE {
 		}
 		
 		Spectrum eval(vec3 wi, vec3 wo) {
-			return albedo * wo.z;
+			return albedo/pi * glm::clamp(wo[2], 0.f, 1.f);
 		}
 	protected:
 		void link_params() {
