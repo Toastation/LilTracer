@@ -187,7 +187,7 @@ namespace LT_NAMESPACE {
 		return generate_from_json(R"(
 	   	{
 			"integrator": {
-				"type":"AOIntegrator"
+				"type":"PathIntegrator"
 			},
 			"brdf": [
 				{"type":"Diffuse","name":"diff","albedo":[0.2,0.5,0.8]},

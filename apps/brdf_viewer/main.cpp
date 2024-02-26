@@ -305,7 +305,8 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
                     
-                    app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
+                    auto ms_per_pix = app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
+                    std::cout << ms_per_pix << std::endl;
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
@@ -318,7 +319,8 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
-                    app_data.ren_glo_ill.integrator->render(app_data.ren_glo_ill.camera, app_data.ren_glo_ill.sensor, app_data.scn_glo_ill, *app_data.ren_glo_ill.sampler);
+                    auto ms_per_pix = app_data.ren_glo_ill.integrator->render(app_data.ren_glo_ill.camera, app_data.ren_glo_ill.sensor, app_data.scn_glo_ill, *app_data.ren_glo_ill.sampler);
+                    std::cout << ms_per_pix << std::endl;
                     app_data.rsen_glo_ill.update_data();
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {

@@ -6,6 +6,8 @@
 #include <lt/sensor.h>
 #include <lt/sampler.h>
 
+#include <chrono>
+
 namespace LT_NAMESPACE {
 
 	class Integrator : public Serializable
@@ -14,8 +16,9 @@ namespace LT_NAMESPACE {
 		
 		Integrator(const std::string& type) : Serializable(type) {};
 
-
-		virtual void render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+		virtual float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+			
+			auto t1 = std::chrono::high_resolution_clock::now();
 			for (int h = 0; h < sensor->h; h++) {
 				for (int w = 0; w < sensor->w; w++) {
 
@@ -24,14 +27,16 @@ namespace LT_NAMESPACE {
 
 					Ray r = camera->generate_ray(sensor->u[w] + jw, sensor->v[h] + jh);
 					Spectrum s;
-					
 					render_pixel(r, s, scene, sampler);
-
-							
-					sensor->add(w, h, s);
-					
+						
+					sensor->add(w, h, s);					
 				}
 			}
+			auto t2 = std::chrono::high_resolution_clock::now();
+
+			float delta_time = (t2 - t1).count();
+			// return ms per pixel
+			return delta_time / (sensor->h * sensor->w);
 		};
 		virtual void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) = 0;
 		
@@ -183,8 +188,7 @@ namespace LT_NAMESPACE {
 						s += Spectrum(1.) / (float(nSample));
 
 				}
-
-					
+			
 			}
 
 		}
