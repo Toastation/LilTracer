@@ -21,11 +21,9 @@ static void glfw_error_callback(int error, const char* description)
 
 struct RenderSensor {
     GLuint spec_id;
-    GLuint count_id;
     std::shared_ptr<lt::Sensor> sensor = nullptr;
     bool initialized = false;
 
-    GLuint fb_id;
 
     bool update_data() {
 
@@ -33,23 +31,14 @@ struct RenderSensor {
             return false;
         }
 
-        /*glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
-        glViewport(0, 0, sensor->w, sensor->h);*/
-
 
         glBindTexture(GL_TEXTURE_2D, spec_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->data.data());
-        glBindTexture(GL_TEXTURE_2D, count_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RED, GL_UNSIGNED_SHORT, sensor->count.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->value.data());
         return true;
     }
 
     bool initialize()
     {
-        
-        //glGenFramebuffers(1, &fb_id);
-        //glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
-
 
         glGenTextures(1, &spec_id);
         glBindTexture(GL_TEXTURE_2D, spec_id);
@@ -58,24 +47,6 @@ struct RenderSensor {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glGenTextures(1, &count_id);
-        glBindTexture(GL_TEXTURE_2D, count_id);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        
-        //glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, id, 0);
-        //GLenum DrawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-        //glDrawBuffers(1, DrawBuffers);
-        //
-        //// Always check that our framebuffer is ok
-        //if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        //    return false;
-        //
         
         initialized = true;
         return true;
@@ -84,7 +55,6 @@ struct RenderSensor {
     ~RenderSensor() {
         if (initialized) {
             glDeleteTextures(1, &spec_id);
-            glDeleteTextures(1, &count_id);
         }
     }
 };
@@ -138,7 +108,7 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
     for (int x = 0; x < sensor->w; x++) {
         for (int y = 0; y < sensor->h; y++) {
             lt::vec3 wo = lt::polar_to_card(th[y], ph[x]);
-            sensor->data[y * sensor->w + x] = brdf->eval(wi, wo);
+            sensor->value[y * sensor->w + x] = brdf->eval(wi, wo);
         }
     }
 
@@ -305,6 +275,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
                     
+                    app_data.ren_dir_light.sensor->reset();
                     auto ms_per_pix = app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
                     std::cout << ms_per_pix << std::endl;
                     app_data.rsen_dir_light.update_data();
@@ -345,7 +316,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360);
             
             std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light.lights[0]) ;
-            dl->dir = lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
+            dl->dir = -lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
 
             ImGui::EndChild();
 

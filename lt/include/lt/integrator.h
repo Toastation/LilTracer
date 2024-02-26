@@ -16,7 +16,9 @@ namespace LT_NAMESPACE {
 	{
 	public:
 		
-		Integrator(const std::string& type) : Serializable(type) {};
+		Integrator(const std::string& type) : Serializable(type) {
+			n_sample = 1;
+		};
 
 		float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
 			
@@ -39,11 +41,11 @@ namespace LT_NAMESPACE {
 #endif
 #if 1
 			int block_size = 16;
-			#pragma omp parallel for collapse(2) num_threads(8) schedule(static)
+			#pragma omp parallel for collapse(2)
 			for (int h = 0; h < sensor->h / block_size + 1; h++)
 				for (int w = 0; w < sensor->w / block_size + 1; w++) {
-					Sampler s;//p (sampler);
-					s.seed(h + w * (block_size + 1));
+					Sampler s;
+					s.seed((h + w * (block_size + 1)) * n_sample);
 					render_bloc(h,w, block_size,camera, sensor, scene, s);
 				}
 			
@@ -66,8 +68,10 @@ namespace LT_NAMESPACE {
 			tg.wait();
 			tbb::missing_wait();
 #endif
+			
+			n_sample++;
+			
 			auto t2 = std::chrono::high_resolution_clock::now();
-
 			float delta_time = (t2 - t1).count();
 			// return ms per pixel
 			return delta_time / (sensor->h * sensor->w);
@@ -123,6 +127,8 @@ namespace LT_NAMESPACE {
 				return si.brdf->eval(wi, wo);
 			return Spectrum(0.);
 		}
+
+		uint32_t n_sample;
 	
 	};
 

@@ -16,31 +16,30 @@ public:
 	}
 
 
-	//bool intersect16(RTCRayHit16 rhs, SurfaceInteraction* si, int* valid) {
+	/*bool intersect16(RTCRayHit16 rhs, SurfaceInteraction* si, int* valid) {
 
-	//	RTCIntersectContext context;
-	//	rtcInitIntersectContext(&context);
+		RTCIntersectContext context;
+		rtcInitIntersectContext(&context);
 
-	//	rtcIntersect16(valid,scene, & context, &rhs);
+		rtcIntersect16(valid,scene, & context, &rhs);
 
-	//	for (int i = 0; i < 16; i++) {
-	//		if (rhs.hit.geomID[i] != RTC_INVALID_GEOMETRY_ID) {
-	//			valid[i] = -1;
+		for (int i = 0; i < 16; i++) {
+			if (rhs.hit.geomID[i] != RTC_INVALID_GEOMETRY_ID) {
+				valid[i] = -1;
 
-	//			std::shared_ptr<Geometry> geom = geometries[rhs.hit.geomID[i]];
+				std::shared_ptr<Geometry> geom = geometries[rhs.hit.geomID[i]];
 
-	//			si[i].t = rhs.ray.tfar[i];
-	//			si[i].brdf = geom->brdf;
-	//			si[i].pos = vec3(rhs.ray.org_x[i] + si[i].t * rhs.ray.dir_x[i], rhs.ray.org_y[i] + si[i].t * rhs.ray.dir_y[i], rhs.ray.org_z[i] + si[i].t * rhs.ray.dir_z[i]);
-	//			si[i].nor = vec3(rhs.hit.Ng_x[i], rhs.hit.Ng_y[i], rhs.hit.Ng_z[i]);
-	//			//si[i].nor = geom->get_normal(rayhit, si.pos);
-	//		}
-	//		else {
-	//			valid[i] = 0;
-	//		}
-	//	}
+				si[i].t = rhs.ray.tfar[i];
+				si[i].brdf = geom->brdf;
+				si[i].pos = vec3(rhs.ray.org_x[i] + si[i].t * rhs.ray.dir_x[i], rhs.ray.org_y[i] + si[i].t * rhs.ray.dir_y[i], rhs.ray.org_z[i] + si[i].t * rhs.ray.dir_z[i]);
+				si[i].nor = geom->get_normal(rtcGetRayHitFromRayHitN((RTCRayHitN*)&rhs,16,i), si[i].pos);
+			}
+			else {
+				valid[i] = 0;
+			}
+		}
 
-	//}
+	}*/
 
 	bool intersect(const Ray& r, SurfaceInteraction& si) {
 		
@@ -60,8 +59,8 @@ public:
 			si.t = rayhit.ray.tfar;
 			si.brdf = geom->brdf;
 			si.pos = r.o + r.d * si.t;
-			//si.nor = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z);
 			si.nor = geom->get_normal(rayhit, si.pos);
+			//si.nor = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z);
 
 			si.finalize();
 			return true;

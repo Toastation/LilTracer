@@ -26,6 +26,7 @@ namespace LT_NAMESPACE {
 	class Diffuse : public Brdf {
 	public:
 		PARAMETER(Spectrum, albedo, 0.5);
+
 		Diffuse() : Brdf("Diffuse") {
 			link_params();
 		}
