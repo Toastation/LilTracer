@@ -5,7 +5,9 @@
 #include <lt/camera.h>
 #include <lt/sensor.h>
 #include <lt/sampler.h>
-
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+#include <tbb/task.h>
 #include <chrono>
 
 namespace LT_NAMESPACE {
@@ -16,12 +18,13 @@ namespace LT_NAMESPACE {
 		
 		Integrator(const std::string& type) : Serializable(type) {};
 
-		virtual float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+		float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
 			
 			auto t1 = std::chrono::high_resolution_clock::now();
+
+#if 0
 			for (int h = 0; h < sensor->h; h++) {
 				for (int w = 0; w < sensor->w; w++) {
-
 					float jw = (2. * sampler.next_float()) / (float)sensor->w;
 					float jh = (2. * sampler.next_float()) / (float)sensor->h;
 
@@ -29,15 +32,70 @@ namespace LT_NAMESPACE {
 					Spectrum s;
 					render_pixel(r, s, scene, sampler);
 						
-					sensor->add(w, h, s);					
+					sensor->add(w, h, s);	
+
 				}
 			}
+#endif
+#if 1
+			int block_size = 16;
+			#pragma omp parallel for collapse(2) num_threads(8) schedule(static)
+			for (int h = 0; h < sensor->h / block_size + 1; h++)
+				for (int w = 0; w < sensor->w / block_size + 1; w++) {
+					Sampler s;//p (sampler);
+					s.seed(h + w * (block_size + 1));
+					render_bloc(h,w, block_size,camera, sensor, scene, s);
+				}
+			
+#endif
+#if 0
+			int block_size = 16;
+			int h_num_block = sensor->h / block_size + 1;
+			int w_num_block = sensor->w / block_size + 1;
+			
+			tbb::task_group tg;
+			
+			for (int h = 0; h < sensor->h / block_size + 1; h++)
+				for (int w = 0; w < sensor->w / block_size + 1; w++) {
+					tg.run([&] {
+						Sampler s;// (sampler);
+						s.seed(h + w * (block_size + 1));
+						render_bloc(h, w, block_size, camera, sensor, scene, s);
+					});
+				}
+			tg.wait();
+			tbb::missing_wait();
+#endif
 			auto t2 = std::chrono::high_resolution_clock::now();
 
 			float delta_time = (t2 - t1).count();
 			// return ms per pixel
 			return delta_time / (sensor->h * sensor->w);
 		};
+
+
+		void render_bloc(uint32_t id_h, uint32_t id_w, uint32_t bloc_size, std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+			uint32_t h_min = id_h * bloc_size;
+			uint32_t w_min = id_w * bloc_size;
+			
+			uint32_t h_max = std::min((id_h + 1) * bloc_size, sensor->h);
+			uint32_t w_max = std::min((id_w + 1) * bloc_size, sensor->w);
+			for (int h = h_min; h < h_max; h++) {
+				for (int w = w_min; w < w_max; w++) {
+
+					float jw = (2. * sampler.next_float()) / (float)sensor->w;
+					float jh = (2. * sampler.next_float()) / (float)sensor->h;
+
+					Ray r = camera->generate_ray(sensor->u[w] + jw, sensor->v[h] + jh);
+					Spectrum s;
+					render_pixel(r, s, scene, sampler);
+
+					sensor->add(w, h, s);
+
+				}
+			}
+		}
+
 		virtual void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) = 0;
 		
 		Spectrum uniform_sample_one_light(Ray& r, SurfaceInteraction& si, Scene& scene, Sampler& sampler) {

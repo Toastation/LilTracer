@@ -8,28 +8,28 @@ namespace LT_NAMESPACE {
 	{
 	public:
 		Sensor() : w(0), h(0) {};
-		Sensor(uint16_t w, uint16_t h) : w(w), h(h) {
+		Sensor(uint32_t w, uint32_t h) : w(w), h(h) {
 			data.resize(w * h);
 			count.resize(w * h);
 			u = linspace<Float>(-1, 1, w);
 			v = linspace<Float>(1, -1, h);
 		}
 		
-		void add(uint16_t x, uint16_t y, Spectrum s) {
+		void add(uint32_t x, uint32_t y, Spectrum s) {
 			uint32_t idx = y * w + x;
 			//data[idx] += s;
 			data[idx] = (data[idx] * Spectrum(count[idx]) + s) / Spectrum(count[idx] + 1);
 			count[idx]++;
 		}
 
-		void set(uint16_t x, uint16_t y, Spectrum s) {
+		void set(uint32_t x, uint32_t y, Spectrum s) {
 			uint32_t idx = y * w + x;
 			data[idx] = s;
 			count[idx] = 1;
 		}
 		
-		uint16_t w;
-		uint16_t h;
+		uint32_t w;
+		uint32_t h;
 		std::vector<Spectrum> data;
 		std::vector<uint16_t> count;
 		std::vector<Float> u;
