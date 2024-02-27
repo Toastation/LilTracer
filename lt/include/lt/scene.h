@@ -1,46 +1,32 @@
+/**
+ * @file
+ * @brief Definition of the Scene class.
+ */
+
 #pragma once
 
 #include <lt/lt_common.h>
 #include <lt/geometry.h>
 #include <lt/light.h>
 #include <lt/brdf.h>
-
+#include <lt/surface_interaction.h>
 
 
 namespace LT_NAMESPACE {
 
+/**
+ * @brief Class representing a scene for ray tracing.
+ */
 class Scene
 {
 public:
-	Scene() {
-	}
 
-
-	/*bool intersect16(RTCRayHit16 rhs, SurfaceInteraction* si, int* valid) {
-
-		RTCIntersectContext context;
-		rtcInitIntersectContext(&context);
-
-		rtcIntersect16(valid,scene, & context, &rhs);
-
-		for (int i = 0; i < 16; i++) {
-			if (rhs.hit.geomID[i] != RTC_INVALID_GEOMETRY_ID) {
-				valid[i] = -1;
-
-				std::shared_ptr<Geometry> geom = geometries[rhs.hit.geomID[i]];
-
-				si[i].t = rhs.ray.tfar[i];
-				si[i].brdf = geom->brdf;
-				si[i].pos = vec3(rhs.ray.org_x[i] + si[i].t * rhs.ray.dir_x[i], rhs.ray.org_y[i] + si[i].t * rhs.ray.dir_y[i], rhs.ray.org_z[i] + si[i].t * rhs.ray.dir_z[i]);
-				si[i].nor = geom->get_normal(rtcGetRayHitFromRayHitN((RTCRayHitN*)&rhs,16,i), si[i].pos);
-			}
-			else {
-				valid[i] = 0;
-			}
-		}
-
-	}*/
-
+	/**
+	 * @brief Intersect a ray with the scene and update the surface interaction if there is an intersection.
+	 * @param r The ray to intersect with the scene.
+	 * @param si The surface interaction to update if there is an intersection.
+	 * @return True if the ray intersects with the scene, false otherwise.
+	 */
 	bool intersect(const Ray& r, SurfaceInteraction& si) {
 		
 		RTCRayHit rayhit;
@@ -69,6 +55,11 @@ public:
 		return false;
 	}
 
+	/**
+	 * @brief Check if a ray intersects with the scene.
+	 * @param r The ray to check for intersection.
+	 * @return True if the ray intersects with the scene, false otherwise.
+	 */
 	bool intersect(const Ray& r) {
 		
 		RTCRay ray;
@@ -88,6 +79,9 @@ public:
 
 	}
 
+	/**
+	 * @brief Initialize Embree RTC device and scene.
+	 */
 	void init_rtc() {
 		device = rtcNewDevice(NULL);
 		scene = rtcNewScene(device);
@@ -100,18 +94,17 @@ public:
 		}
 
 		rtcCommitScene(scene);
-
-
+		
 		rtcInitIntersectContext(&context);
 	}
 
-	RTCDevice device;
-	RTCScene scene;
-	RTCIntersectContext context;
+	RTCDevice device; 				/**< Embree RTC device. */
+	RTCScene scene; 				/**< Embree RTC scene. */
+	RTCIntersectContext context; 	/**< Embree RTC intersect context. */
 
-	std::vector<std::shared_ptr<Geometry>> geometries;
-	std::vector<std::shared_ptr<Light>> lights;
-	std::vector<std::shared_ptr<Brdf>> brdfs;
+	std::vector<std::shared_ptr<Geometry>> geometries; 	/**< Vector of geometry in the scene. */
+	std::vector<std::shared_ptr<Light>> lights; 		/**< Vector of light in the scene. */
+	std::vector<std::shared_ptr<Brdf>> brdfs; 			/**< Vector of BRDF in the scene. */
 };
 
 

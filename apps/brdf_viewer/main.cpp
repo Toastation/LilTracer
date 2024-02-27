@@ -18,6 +18,8 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+static bool need_reset;
+#define NEED_RESET(x) if(x){ need_reset = true; }
 
 struct RenderSensor {
     GLuint spec_id;
@@ -78,9 +80,9 @@ struct AppData {
 };
 
 void AppInit(AppData& app_data) {
+    need_reset = false;
+
     app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
-    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("RoughConductor"));
-    app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("TestBrdf"));
     app_data.current_brdf_idx = 0;
     
     
@@ -89,9 +91,11 @@ void AppInit(AppData& app_data) {
     app_data.rsen_dir_light.initialize();
     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
-    lt::cornell_box(app_data.scn_glo_ill, app_data.ren_glo_ill);
+    lt::prob_scn(app_data.scn_glo_ill, app_data.ren_glo_ill);
     app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
     app_data.rsen_glo_ill.initialize();
+    app_data.scn_glo_ill.geometries[1]->brdf = app_data.brdfs[app_data.current_brdf_idx];
+    app_data.scn_glo_ill.geometries[3]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
     app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
@@ -123,6 +127,13 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     ImGui::SetNextWindowSize(ImVec2(width, height)); // ensures ImGui fits the GLFW window
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     
+
+    if (need_reset) {
+        app_data.rsen_dir_light.sensor->reset();
+        app_data.rsen_glo_ill.sensor->reset();
+        need_reset = false;
+    }
+
     bool open = true;
     if (ImGui::Begin("Simple layout", &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
     {
@@ -131,11 +142,31 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::BeginGroup();
             
             ImGui::BeginChild("top pane", ImVec2(250, ImGui::GetContentRegionAvail().y*0.25),true);
+            
+
+            const std::vector<std::string>& brdf_names = lt::Factory<lt::Brdf>::names();
+
+            if (ImGui::Button("New BRDF"))
+                ImGui::OpenPopup("brdf_popup");
+
+            if (ImGui::BeginPopup("brdf_popup"))
+            {
+                for (int i = 0; i < brdf_names.size(); i++)
+                    if (ImGui::Selectable(brdf_names[i].c_str()))
+                        app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create(brdf_names[i]));
+                ImGui::EndPopup();
+            }
+             
+            ImGui::Separator();
+
             for (int i = 0; i < app_data.brdfs.size(); i++)
             {
                 if (ImGui::Selectable( (app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
                     app_data.current_brdf_idx = i;
                     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[i];
+                    app_data.scn_glo_ill.geometries[1]->brdf = app_data.brdfs[i];
+                    app_data.scn_glo_ill.geometries[3]->brdf = app_data.brdfs[i];
+                    need_reset = true;
                 }
             }
 
@@ -148,10 +179,10 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 switch (cur_brdf->params.types[i])
                 {
                 case lt::Params::Type::FLOAT:
-                    ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]);
+                    NEED_RESET(ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
                     break;
                 case lt::Params::Type::VEC3:
-                    ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]);
+                    NEED_RESET(ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
                     break;
                 case lt::Params::Type::SH:
                     if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
@@ -227,7 +258,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                     xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
 
                                 }
-                                ImPlot::PlotLine(brdf->type.c_str(), th.data(), xs, 1001);
+                                ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), th.data(), xs, 1001);
 
 
                             }
@@ -274,8 +305,6 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
-                    
-                    app_data.ren_dir_light.sensor->reset();
                     auto ms_per_pix = app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
                     std::cout << ms_per_pix << std::endl;
                     app_data.rsen_dir_light.update_data();
@@ -310,10 +339,10 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::BeginChild("scene param", ImVec2(0, 0), true);
 
             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.45);
-            ImGui::SliderAngle("th_i", &app_data.theta_i, 0, 90);
+            NEED_RESET(ImGui::SliderAngle("th_i", &app_data.theta_i, 0, 90));
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.45);
-            ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360);
+            NEED_RESET(ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360));
             
             std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light.lights[0]) ;
             dl->dir = -lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));

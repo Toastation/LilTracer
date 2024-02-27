@@ -1,3 +1,8 @@
+/**
+ * @file integrator.h
+ * @brief Defines classes related to rendering integrators.
+ */
+
 #pragma once
 #include <lt/lt_common.h>
 #include <lt/serialize.h>
@@ -12,14 +17,27 @@
 
 namespace LT_NAMESPACE {
 
+
 	class Integrator : public Serializable
 	{
 	public:
 		
+		/**
+		 * @brief Constructor.
+		 * @param type The type of the integrator.
+		 */
 		Integrator(const std::string& type) : Serializable(type) {
 			n_sample = 1;
 		};
 
+		/**
+		 * @brief Renders the scene.
+		 * @param camera The camera used for rendering.
+		 * @param sensor The sensor to capture the rendered image.
+		 * @param scene The scene to render.
+		 * @param sampler The sampler used for sampling.
+		 * @return The time taken per pixel in milliseconds.
+		 */
 		float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
 			
 			auto t1 = std::chrono::high_resolution_clock::now();
@@ -45,8 +63,8 @@ namespace LT_NAMESPACE {
 			for (int h = 0; h < sensor->h / block_size + 1; h++)
 				for (int w = 0; w < sensor->w / block_size + 1; w++) {
 					Sampler s;
-					s.seed((h + w * (block_size + 1)) * n_sample);
-					render_bloc(h,w, block_size,camera, sensor, scene, s);
+					s.seed((h + w * (block_size + 1) +1 ) * n_sample);
+					render_block(h,w, block_size,camera, sensor, scene, s);
 				}
 			
 #endif
@@ -62,7 +80,7 @@ namespace LT_NAMESPACE {
 					tg.run([&] {
 						Sampler s;// (sampler);
 						s.seed(h + w * (block_size + 1));
-						render_bloc(h, w, block_size, camera, sensor, scene, s);
+						render_block(h, w, block_size, camera, sensor, scene, s);
 					});
 				}
 			tg.wait();
@@ -77,13 +95,22 @@ namespace LT_NAMESPACE {
 			return delta_time / (sensor->h * sensor->w);
 		};
 
-
-		void render_bloc(uint32_t id_h, uint32_t id_w, uint32_t bloc_size, std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
-			uint32_t h_min = id_h * bloc_size;
-			uint32_t w_min = id_w * bloc_size;
+		/**
+		 * @brief Renders a block of pixels in the scene.
+		 * @param id_h The ID of the block in the vertical direction.
+		 * @param id_w The ID of the block in the horizontal direction.
+		 * @param block_size The size of the block.
+		 * @param camera The camera used for rendering.
+		 * @param sensor The sensor to capture the rendered image.
+		 * @param scene The scene to render.
+		 * @param sampler The sampler used for sampling.
+		 */
+		void render_block(uint32_t id_h, uint32_t id_w, uint32_t block_size, std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor, Scene& scene, Sampler& sampler) {
+			uint32_t h_min = id_h * block_size;
+			uint32_t w_min = id_w * block_size;
 			
-			uint32_t h_max = std::min((id_h + 1) * bloc_size, sensor->h);
-			uint32_t w_max = std::min((id_w + 1) * bloc_size, sensor->w);
+			uint32_t h_max = std::min((id_h + 1) * block_size, sensor->h);
+			uint32_t w_max = std::min((id_w + 1) * block_size, sensor->w);
 			for (int h = h_min; h < h_max; h++) {
 				for (int w = w_min; w < w_max; w++) {
 
@@ -91,8 +118,7 @@ namespace LT_NAMESPACE {
 					float jh = (2. * sampler.next_float()) / (float)sensor->h;
 
 					Ray r = camera->generate_ray(sensor->u[w] + jw, sensor->v[h] + jh);
-					Spectrum s;
-					render_pixel(r, s, scene, sampler);
+					Spectrum s = render_pixel(r, scene, sampler);
 
 					sensor->add(w, h, s);
 
@@ -100,8 +126,23 @@ namespace LT_NAMESPACE {
 			}
 		}
 
-		virtual void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) = 0;
+		/**
+		 * @brief Renders a single pixel in the scene.
+		 * @param r The ray starting from the pixel.
+		 * @param scene The scene to render.
+		 * @param sampler The sampler used for sampling.
+		 * @return The resulting contribution.
+		 */
+		virtual Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler) = 0;
 		
+		/**
+		 * @brief Estimates direct lighting contribution from random light source.
+		 * @param r The ray representing the pixel.
+		 * @param si Surface interaction data.
+		 * @param scene The scene to render.
+		 * @param sampler The sampler used for sampling.
+		 * @return The estimated direct lighting contribution.
+		 */
 		Spectrum uniform_sample_one_light(Ray& r, SurfaceInteraction& si, Scene& scene, Sampler& sampler) {
 			int n_light = scene.lights.size();
 
@@ -116,6 +157,15 @@ namespace LT_NAMESPACE {
 			return estimate_direct(r, si, light, scene, sampler) / light_pdf;
 		}
 
+		/**
+		 * @brief Estimates direct lighting contribution from a light source.
+		 * @param r The ray representing the pixel.
+		 * @param si Surface interaction data.
+		 * @param light The light source.
+		 * @param scene The scene to render.
+		 * @param sampler The sampler used for sampling.
+		 * @return The estimated direct lighting contribution.
+		 */
 		Spectrum estimate_direct(Ray& r, SurfaceInteraction& si, const std::shared_ptr<Light>& light, Scene& scene, Sampler& sampler) {
 
 			vec3 l = light->sample_light_direction();
@@ -132,30 +182,34 @@ namespace LT_NAMESPACE {
 	
 	};
 
-
+	/**
+	 * @brief Direct lighting integrator class.
+	 */
 	class DirectIntegrator : public Integrator
 	{
 	public:
+
 		DirectIntegrator() : Integrator("DirectIntegrator") {
 			link_params();
 		};
 
-		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
+		Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler) {
 			
 			SurfaceInteraction si;
 			
-			s = Spectrum(0.);
+			Spectrum s(0.);
 
 			if (scene.intersect(r, si)) {
 
 				if (!si.brdf) {
 					r = Ray(si.pos + r.d * 0.00001f, r.d);
-					render_pixel(r, s, scene, sampler);
-					return;
+					return render_pixel(r, scene, sampler);
 				}
 				
 				s += uniform_sample_one_light(r, si, scene, sampler);
 			}
+
+			return s;
 		}
 	protected:
 		void link_params() {
@@ -163,6 +217,9 @@ namespace LT_NAMESPACE {
 		}
 	};
 
+	/**
+	 * @brief Path tracing integrator class.
+	 */
 	class PathIntegrator : public Integrator
 	{
 	public:
@@ -173,10 +230,10 @@ namespace LT_NAMESPACE {
 		};
 
 
-		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
+		Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler) {
 
 			Spectrum attenuation(1.);
-			s = Spectrum(0.);
+			Spectrum s(0.);
 
 			for (int d = 0; d < depth; d++) {
 
@@ -212,16 +269,21 @@ namespace LT_NAMESPACE {
 				}
 			}
 
+			return s;
 		}
 		
 
-		uint32_t depth;
+		uint32_t depth; /**< Maximum depth of path tracing. */
 	protected:
 		void link_params() {
 			
 		}
 	};
 
+	
+	/**
+	 * @brief Ambient occlusion integrator class.
+	 */
 	class AOIntegrator : public Integrator
 	{
 	public:
@@ -229,11 +291,11 @@ namespace LT_NAMESPACE {
 			link_params();
 		};
 
-		void render_pixel(Ray& r, Spectrum& s, Scene& scene, Sampler& sampler) {
+		Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler) {
 
 			SurfaceInteraction si;
 			
-			s = Spectrum(0.);
+			Spectrum s(0.);
 
 			if (scene.intersect(r, si)) {
 
@@ -254,6 +316,8 @@ namespace LT_NAMESPACE {
 				}
 			
 			}
+
+			return s;
 
 		}
 	protected:

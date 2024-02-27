@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @brief Definitions of the Geometry, Mesh, and Sphere classes.
+ */
+
 #pragma once
 
 #include <lt/lt_common.h>
@@ -8,26 +13,53 @@
 
 namespace LT_NAMESPACE {
 
+	/**
+	 * @brief Abstract base class for geometric objects in the scene.
+	 */
 	class Geometry : public Serializable
 	{
 	public:
+		/**
+		 * @brief Constructor for Geometry.
+		 * @param type The type of geometry.
+		 */
 		Geometry(const std::string& type) : Serializable(type) {};
 
+		/**
+		 * @brief Pure virtual function for computing the normal at a hit position.
+		 * @param rayhit Information about the ray hit.
+		 * @param hit_pos The position of the hit.
+		 * @return The normal vector at the hit position.
+		 */
 		virtual vec3 get_normal(RTCRayHit rayhit, const vec3& hit_pos) = 0;
+
+		/**
+		 * @brief Pure virtual function for initializing Embree RTC geometry.
+		 * @param device The Embree RTC device.
+		 */
 		virtual void init_rtc(RTCDevice device) = 0;
 
-		std::shared_ptr<Brdf> brdf;
-		RTCGeometry rtc_geom;
+		std::shared_ptr<Brdf> brdf; /**< Pointer to the BRDF associated with the geometry. */
+		RTCGeometry rtc_geom;		/**< Embree RTC geometry. */
 	};
 
-
+	/**
+	 * @brief Class representing a triangle mesh geometry.
+	 */
 	class Mesh : public Geometry
 	{
 	public:
+		/**
+		 * @brief Default constructor for Mesh.
+		 * Initializes the geometry type and links parameters.
+		 */
 		Mesh() : Geometry("Mesh") {
 			link_params();
 		};
 
+		/**
+		 * @brief Initialize the mesh geometry by parsing an OBJ file.
+		 */
 		void init() {
 			// Parse obj
 			fastObjMesh* fobj = fast_obj_read(filename.c_str());
@@ -68,6 +100,10 @@ namespace LT_NAMESPACE {
 			fast_obj_destroy(fobj);
 		};
 
+		/**
+		 * @brief Initialize the Embree RTC geometry for the mesh.
+		 * @param device The Embree RTC device.
+		 */
 		void init_rtc(RTCDevice device) {
 			rtc_geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
 
@@ -87,6 +123,12 @@ namespace LT_NAMESPACE {
 
 		}
 
+		/**
+		 * @brief Compute the normal at the hit position using barycentric interpolation.
+		 * @param rayhit Information about the ray hit.
+		 * @param hit_pos The position of the hit.
+		 * @return The interpolated normal vector at the hit position.
+		 */
 		vec3 get_normal(RTCRayHit rayhit, const vec3& hit_pos) {
 			unsigned int prim_id = rayhit.hit.primID;
 			glm::uvec3 face_nor = triangle_indices[prim_id];
@@ -100,13 +142,16 @@ namespace LT_NAMESPACE {
 		}
 
 
-		std::string filename;
-		std::vector<vec3> normal;
-		std::vector<vec3> vertex;
-		std::vector<glm::uvec3> triangle_indices;
+		std::string filename;						/**< Filename of the OBJ file. */
+		std::vector<vec3> normal;					/**< Vertex normals. */
+		std::vector<vec3> vertex;					/**< Vertex positions. */
+		std::vector<glm::uvec3> triangle_indices;	/**< Indices of triangle vertices. */
 
 
 	protected:
+		/**
+		 * @brief Link parameters with the Params struct.
+		 */
 		void link_params() {
 			params.add("filename", Params::Type::PATH, &filename);
 			params.add("brdf", Params::Type::BRDF, &brdf);
@@ -114,9 +159,16 @@ namespace LT_NAMESPACE {
 
 	};
 
+	/**
+	 * @brief Class representing a sphere geometry.
+	 */
 	class Sphere : public Geometry
 	{
 	public:
+		/**
+		 * @brief Default constructor for Sphere.
+		 * Initializes the geometry type, position, and radius.
+		 */
 		Sphere() :
 			Geometry("Sphere"),
 			pos(vec3(0.)),
@@ -127,8 +179,15 @@ namespace LT_NAMESPACE {
 			this->brdf = std::shared_ptr<Brdf>(nullptr);
 		};
 
+		/**
+		 * @brief Initialize the sphere geometry.
+		 */
 		void init() {};
 
+		/**
+		 * @brief Initialize the Embree RTC geometry for the sphere.
+		 * @param device The Embree RTC device.
+		 */
 		void init_rtc(RTCDevice device) {
 			// Set embree
 			rtc_geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_SPHERE_POINT);
@@ -141,15 +200,24 @@ namespace LT_NAMESPACE {
 			vb[3] = rad;
 		}
 
+		/**
+		 * @brief Compute the normal at the hit position for the sphere.
+		 * @param rayhit Information about the ray hit.
+		 * @param hit_pos The position of the hit.
+		 * @return The normal vector at the hit position.
+		 */
 		vec3 get_normal(RTCRayHit rayhit, const vec3& hit_pos) {
 			return (hit_pos - pos) / rad;
 		}
 
-		vec3 pos;
-		float rad;
+		vec3 pos;	/**< Center position of the sphere. */
+		float rad;	/**< Radius of the sphere. */
 
 
 	protected:
+		/**
+		 * @brief Link parameters with the Params struct.
+		 */
 		void link_params() {
 			params.add("pos", Params::Type::VEC3 , &pos);
 			params.add("rad", Params::Type::FLOAT, &rad);

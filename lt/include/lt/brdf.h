@@ -1,3 +1,8 @@
+/**
+ * @file brdf.h
+ * @brief Defines classes related to Bidirectional Reflectance Distribution Functions (BRDFs).
+ */
+
 #pragma once
 
 #include <lt/lt_common.h>
@@ -8,24 +13,49 @@
 namespace LT_NAMESPACE {
 	#define PARAMETER(type,name,default_values) type name = type(default_values)
 
-	
+	/**
+	 * @brief Base class for Bidirectional Reflectance Distribution Functions (BRDFs).
+	 */
 	class Brdf : public Serializable
 	{
 	public:
+		/**
+		 * @brief Constructor.
+		 * @param type The type of the BRDF.
+		 */
 		Brdf(const std::string& type) : Serializable(type) {};
 		
+		/**
+		 * @brief Evaluates the BRDF.
+		 * @param wi Incident direction.
+		 * @param wo Outgoing direction.
+		 * @return The evaluated spectrum.
+		 */
 		virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
 		
+		/**
+		 * @brief Samples the BRDF.
+		 * @param wi Incident direction.
+		 * @param sampler The sampler object used for sampling.
+		 * @return The sampled direction.
+		 */
 		virtual vec3 sample(const vec3& wi, Sampler& sampler);
 		
+		/**
+		 * @brief Computes the density of a sample.
+		 * @param w Direction.
+		 * @return The density value.
+		 */
 		virtual float pdf(vec3 w);
 
 	};
 
-
+	/**
+	 * @brief Diffuse BRDF class.
+	 */
 	class Diffuse : public Brdf {
 	public:
-		PARAMETER(Spectrum, albedo, 0.5);
+		PARAMETER(Spectrum, albedo, 0.5); /**< Albedo of the surface. */
 
 		Diffuse() : Brdf("Diffuse") {
 			link_params();
@@ -40,10 +70,13 @@ namespace LT_NAMESPACE {
 		}
 	};
 
+	/**
+	 * @brief Rough Conductor BRDF class.
+	 */
 	class RoughConductor : public Brdf {
 	public:
-		PARAMETER(Float, alpha_x, 0.5);
-		PARAMETER(Float, alpha_y, 0.5);
+		PARAMETER(Float, alpha_x, 0.5); /**< Roughness value in x-direction. */
+		PARAMETER(Float, alpha_y, 0.5); /**< Roughness value in y-direction. */
 		
 		RoughConductor() : Brdf("RoughConductor") {
 			link_params();
@@ -73,11 +106,14 @@ namespace LT_NAMESPACE {
 		}
 	};
 
+	/**
+	 * @brief Test BRDF class for demonstration purposes.
+	 */
 	class TestBrdf : public Brdf{
 	public:
-		PARAMETER(float, v1, 0.5);
-		PARAMETER(Spectrum, v2, 0.5);
-		PARAMETER(std::vector<float>, v3, 0);
+		PARAMETER(float, v1, 0.5); 				/**< Test parameter 1. (float) */
+		PARAMETER(Spectrum, v2, 0.5); 			/**< Test parameter 2. (Spectrum) */
+		PARAMETER(std::vector<float>, v3, 0); 	/**< Test parameter 3. (Array<float>) */
 		
 		TestBrdf() : Brdf("TestBrdf") {
 			v3.push_back(2.);
