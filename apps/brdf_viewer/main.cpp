@@ -71,11 +71,11 @@ struct AppData {
     float phi_i = 0.;
 
     lt::Scene    scn_dir_light;
-    lt::Renderer ren_dir_light;
+    lt::RendererAsync ren_dir_light;
     RenderSensor rsen_dir_light;
 
     lt::Scene    scn_glo_ill;
-    lt::Renderer ren_glo_ill;
+    lt::RendererAsync ren_glo_ill;
     RenderSensor rsen_glo_ill;
 };
 
@@ -129,8 +129,8 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     
 
     if (need_reset) {
-        app_data.rsen_dir_light.sensor->reset();
-        app_data.rsen_glo_ill.sensor->reset();
+        app_data.ren_glo_ill.reset();
+        app_data.ren_dir_light.reset();
         need_reset = false;
     }
 
@@ -305,7 +305,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
-                    auto ms_per_pix = app_data.ren_dir_light.integrator->render(app_data.ren_dir_light.camera, app_data.ren_dir_light.sensor, app_data.scn_dir_light, *app_data.ren_dir_light.sampler);
+                    auto ms_per_pix = app_data.ren_dir_light.render(app_data.scn_dir_light);
                     std::cout << ms_per_pix << std::endl;
                     app_data.rsen_dir_light.update_data();
 
@@ -319,8 +319,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
-                    auto ms_per_pix = app_data.ren_glo_ill.integrator->render(app_data.ren_glo_ill.camera, app_data.ren_glo_ill.sensor, app_data.scn_glo_ill, *app_data.ren_glo_ill.sampler);
-                    std::cout << ms_per_pix << std::endl;
+                    //auto ms_per_pix = app_data.ren_glo_ill.render(app_data.scn_glo_ill);
+                    //std::cout << ms_per_pix << std::endl;
+                    app_data.ren_glo_ill.render(app_data.scn_glo_ill);
                     app_data.rsen_glo_ill.update_data();
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
