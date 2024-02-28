@@ -4,7 +4,7 @@
  
 # Auto documentation
 ## Doxygen
-find_package(Doxygen REQUIRED)
+find_package(Doxygen)
 
 if(DOXYGEN)
   add_custom_target(

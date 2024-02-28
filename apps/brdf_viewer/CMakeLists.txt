@@ -17,3 +17,6 @@ target_link_libraries(brdf_viewer PRIVATE imgui::imgui)
 
 find_package(implot CONFIG REQUIRED)
 target_link_libraries(brdf_viewer PRIVATE implot::implot)
+
+find_package(OpenMP REQUIRED)
+target_link_libraries(brdf_viewer PRIVATE OpenMP::OpenMP_CXX)
