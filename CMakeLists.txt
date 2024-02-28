@@ -11,11 +11,16 @@ project(LilTracer
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+include(clang_format)
+
 # ----------------------------------------------------------------------------
 # LilTracer library
 # ----------------------------------------------------------------------------
 
 add_subdirectory(lt)
+add_clang_format_target(format-liltracer lt)
 
 
 # ----------------------------------------------------------------------------
@@ -23,7 +28,6 @@ add_subdirectory(lt)
 # ----------------------------------------------------------------------------
 
 add_subdirectory(apps/brdf_viewer)
-
 
 # ----------------------------------------------------------------------------
 # Documentation

@@ -2,6 +2,6 @@
 
 namespace LT_NAMESPACE {
 
-	int Serializable::item_count = 0;
+int Serializable::item_count = 0;
 
 }

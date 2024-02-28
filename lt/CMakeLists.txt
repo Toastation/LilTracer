@@ -12,7 +12,6 @@ add_library(${PROGRAM_NAME}  STATIC ${cpp_h_files} )
 target_include_directories(${PROGRAM_NAME}  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ../3rd_party/fast_obj)
 
 
-
 add_library(fast_obj_lib STATIC ../3rd_party/fast_obj/fast_obj.c ../3rd_party/fast_obj/fast_obj.h)
 target_link_libraries(${PROGRAM_NAME}  PRIVATE fast_obj_lib)
 
