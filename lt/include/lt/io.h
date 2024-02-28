@@ -238,8 +238,8 @@ inline bool prob_scn(Scene &scn, Renderer &ren) {
 				"type":"PathIntegrator"
 			},
 			"brdf": [
-				{"type":"Diffuse","name":"base","albedo":[0.4,0.4,0.4]},
-				{"type":"Diffuse","name":"floor","albedo":[0.5,0.5,0.5]},
+				{"type":"Diffuse","name":"base","albedo":[0.2,0.2,0.2]},
+				{"type":"Diffuse","name":"floor","albedo":[0.4,0.4,0.4]},
 				{"type":"Diffuse","name":"mat","albedo":[0.5,0.4,0.3]}
 			],
 			"light": [

@@ -65,4 +65,24 @@ class DirectionnalLight : public Light {
   }
 };
 
+
+
+/**
+ * @brief Class representing a directional light source.
+ */
+class EnvironmentLight : public Light {
+public:
+    EnvironmentLight() : Light("EnvironmentLight") { link_params(); }
+
+    vec3 sample_light_direction() { return dir; }
+
+    void init() { dir = glm::normalize(dir); }
+
+    vec3 dir = vec3(1, 0, 0); 
+
+protected:
+    void link_params() {
+    }
+};
+
 }  // namespace LT_NAMESPACE

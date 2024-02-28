@@ -58,7 +58,7 @@ class Sensor {
     uint32_t idx = y * w + x;
     acculumator[idx] += s;
     count[idx]++;
-    value[idx] = acculumator[idx] / Spectrum(count[idx]);
+    value[idx] = glm::pow(acculumator[idx] / Spectrum(count[idx]),Spectrum(0.4545));
   }
 
   /**
@@ -70,7 +70,7 @@ class Sensor {
    */
   void set(const uint32_t &x, const uint32_t &y, Spectrum s) {
     uint32_t idx = y * w + x;
-    value[idx] = s;
+    value[idx] = glm::pow(s, Spectrum(0.4545));
     acculumator[idx] = s;
     count[idx] = 1;
   }
