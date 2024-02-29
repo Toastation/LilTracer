@@ -47,8 +47,14 @@ public:
 	}
 
 	~RendererAsync() {
-		//thr.join();
-		thr.detach();
+		try {
+			if (thr.joinable()) {
+				thr.join();
+			}
+		}
+		catch (std::exception& ex) {
+			std::cerr << ex.what()  << std::endl;
+		}
 	}
 
 	void reset() {

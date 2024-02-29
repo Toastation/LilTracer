@@ -55,7 +55,7 @@ class Integrator : public Serializable {
 #endif
 #if 1
     int block_size = 16;
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2) schedule(dynamic)
     for (int h = 0; h < sensor->h / block_size + 1; h++)
       for (int w = 0; w < sensor->w / block_size + 1; w++) {
         Sampler s;
