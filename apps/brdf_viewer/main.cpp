@@ -364,7 +364,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                     ImPlot::EndPlot();
                                 }
 
-                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
+                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "Theta O", "y")) {
 
 
                                     static float r[1001];
