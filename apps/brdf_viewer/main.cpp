@@ -104,7 +104,8 @@ void AppInit(AppData& app_data) {
 
 
 void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::shared_ptr<lt::Sensor> sensor) {
-    
+
+#if 1
     std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, sensor->h);
     std::vector<float> ph = lt::linspace<float>(0, 2.  * lt::pi, sensor->w);
     
@@ -115,7 +116,36 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
             sensor->value[y * sensor->w + x] = brdf->eval(wi, wo);
         }
     }
+#endif
+#if 0
+    std::vector<float> th_d = lt::linspace<float>(0.5 * lt::pi, 0., sensor->h);
+    std::vector<float> th_h = lt::linspace<float>(0, 0.5 * lt::pi, sensor->w);
+    float ph = ph_i;
 
+    for (int x = 0; x < sensor->w; x++) {
+        for (int y = 0; y < sensor->h; y++) {
+
+            float sin_th_d = std::sin(th_d[y]);
+            float cos_th_d = std::cos(th_d[y]);
+
+            float sin_th_h = std::sin(th_h[x]);
+            float cos_th_h = std::cos(th_h[x]);
+
+            float sin_ph = std::sin(ph);
+            float cos_ph = std::cos(ph);
+
+            lt::vec3 wd = lt::polar_to_card(th_d[y], 0);
+            lt::vec3 wi = lt::vec3(cos_th_h * wd.x + sin_th_h * wd.z, 0.,-sin_th_h * wd.x + cos_th_h * wd.z);
+            wi = lt::vec3(cos_ph * wi.x + sin_ph * wi.y, -sin_ph * wi.x + cos_ph * wi.y, wi.z);
+
+            lt::vec3 wh = lt::polar_to_card(th_h[x], 0.);
+            
+            lt::vec3 wo = glm::reflect(-wi, wh);
+         
+            sensor->value[y * sensor->w + x] = glm::pow(brdf->eval(wi, wo),lt::vec3(0.4545));
+        }
+    }
+#endif
 }
 
 
@@ -237,65 +267,136 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     }
                     ImGui::EndTabItem();
                 }
-                if (ImGui::BeginTabItem("Polar plot"))
+                
+                if (ImGui::BeginTabItem("Plot"))
                 {
-                    static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY;
-                    if (ImPlot::BeginSubplots("##AxisLinking", 2, 1,ImVec2(-1,-1), flags)) {
-                        
+                    if (ImGui::BeginTabBar("##TabsPolar", ImGuiTabBarFlags_None))
+                    {
 
-                        std::vector<float> th = lt::linspace<float>(0., 0.5 * lt::pi, 1001);
+                        if (ImGui::BeginTabItem("Polar"))
+                        {
+                            static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY;
+                            if (ImPlot::BeginSubplots("##AxisLinking", 2, 1, ImVec2(-1, -1), flags)) {
 
-                        if (ImPlot::BeginPlot("", "x", "y")) {
+                                std::vector<float> th = lt::linspace<float>(-0.5 * lt::pi, 0.5 * lt::pi, 1001);
 
-                            for (int i = 0; i < app_data.brdfs.size(); i++) {
-                                std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
+                                if (ImPlot::BeginPlot("", "x", "y")) {
 
-                                static float xs[1001];
-                                for (int x = 0; x < 1001; x++) {
-                                    lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
-                                    lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                    lt::vec3 rgb = brdf->eval(wi, wo);
-                                    xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
+                                    for (int i = 0; i < app_data.brdfs.size(); i++) {
+                                        std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
 
+                                        static float xs[1001];
+                                        static float ys[1001];
+                                        for (int x = 0; x < 1001; x++) {
+                                            lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                            lt::vec3 wo = lt::polar_to_card(th[x], 0.);
+                                            lt::vec3 rgb = brdf->eval(wi, wo);
+                                            float l = (rgb.x + rgb.y + rgb.z) / 3.;
+                                            xs[x] = wo.x * l;
+                                            ys[x] = wo.z * l;
+                                        }
+                                        ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), xs, ys, 1001);
+
+
+                                    }
+                                    ImPlot::EndPlot();
                                 }
-                                ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), th.data(), xs, 1001);
+
+                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
 
 
+                                    lt::vec3 rgb[1001];
+                                    for (int x = 0; x < 1001; x++) {
+                                        lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                        lt::vec3 wo = lt::polar_to_card(th[x], 0.);
+                                        rgb[x] = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo);
+                                    }
+
+                                    const char* col_name[3] = { "r", "g", "b" };
+                                    const ImVec4 col[3] = { ImVec4(1., 0., 0., 1.), ImVec4(0., 1., 0., 1.), ImVec4(0., 0., 1., 1.) };
+                                    for (int c = 0; c < 3; c++) {
+                                        static float xs[1001];
+                                        static float ys[1001];
+                                        for (int x = 0; x < 1001; x++) {
+                                            lt::vec3 wo = lt::polar_to_card(th[x], 0.);
+                                            xs[x] = wo.x * rgb[x][c];
+                                            ys[x] = wo.z * rgb[x][c];
+                                        }
+                                        ImPlot::SetNextLineStyle(col[c]);
+                                        ImPlot::PlotLine(col_name[c], xs, ys, 1001);
+
+                                    }
+
+                                    ImPlot::EndPlot();
+                                }
+
+                                ImPlot::EndSubplots();
                             }
-                            ImPlot::EndPlot();
+
+                            ImGui::EndTabItem();
                         }
 
-                        if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
+                        if (ImGui::BeginTabItem("Theta I"))
+                        {
+                            static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY;
+                            if (ImPlot::BeginSubplots("##AxisLinking", 2, 1, ImVec2(-1, -1), flags)) {
 
 
-                            static float r[1001];
-                            static float g[1001];
-                            static float b[1001];
-                            for (int x = 0; x < 1001; x++) {
-                                lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
-                                lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                lt::vec3 rgb = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo);
-                                r[x] = rgb.x;
-                                g[x] = rgb.y;
-                                b[x] = rgb.z;
+                                std::vector<float> th = lt::linspace<float>(0., 0.5 * lt::pi, 1001);
 
+                                if (ImPlot::BeginPlot("", "x", "y")) {
+
+                                    for (int i = 0; i < app_data.brdfs.size(); i++) {
+                                        std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
+
+                                        static float xs[1001];
+                                        for (int x = 0; x < 1001; x++) {
+                                            lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                            lt::vec3 wo = lt::polar_to_card(th[x], 0.);
+                                            lt::vec3 rgb = brdf->eval(wi, wo);
+                                            xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
+
+                                        }
+                                        ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), th.data(), xs, 1001);
+
+
+                                    }
+                                    ImPlot::EndPlot();
+                                }
+
+                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
+
+
+                                    static float r[1001];
+                                    static float g[1001];
+                                    static float b[1001];
+                                    for (int x = 0; x < 1001; x++) {
+                                        lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                        lt::vec3 wo = lt::polar_to_card(th[x], 0.);
+                                        lt::vec3 rgb = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo);
+                                        r[x] = rgb.x;
+                                        g[x] = rgb.y;
+                                        b[x] = rgb.z;
+
+                                    }
+                                    ImPlot::SetNextLineStyle(ImVec4(1., 0., 0., 1.));
+                                    ImPlot::PlotLine("r", th.data(), r, 1001);
+                                    ImPlot::SetNextLineStyle(ImVec4(0., 1., 0., 1.));
+                                    ImPlot::PlotLine("g", th.data(), g, 1001);
+                                    ImPlot::SetNextLineStyle(ImVec4(0., 0., 1., 1.));
+                                    ImPlot::PlotLine("b", th.data(), b, 1001);
+
+                                    ImPlot::EndPlot();
+                                }
+
+                                ImPlot::EndSubplots();
                             }
-                            ImPlot::SetNextLineStyle(ImVec4(1., 0., 0., 1.));
-                            ImPlot::PlotLine("r", th.data(), r, 1001);
-                            ImPlot::SetNextLineStyle(ImVec4(0., 1., 0., 1.));
-                            ImPlot::PlotLine("g", th.data(), g, 1001);
-                            ImPlot::SetNextLineStyle(ImVec4(0., 0., 1., 1.));
-                            ImPlot::PlotLine("b", th.data(), b, 1001);
 
-                            ImPlot::EndPlot();
+                            ImGui::EndTabItem();
                         }
 
-                        ImPlot::EndSubplots();
+                        ImGui::EndTabBar();
                     }
-
-                    
-
-
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Sampling"))
