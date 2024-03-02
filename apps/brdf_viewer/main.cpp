@@ -209,7 +209,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 switch (cur_brdf->params.types[i])
                 {
                 case lt::Params::Type::FLOAT:
-                    NEED_RESET(ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
+                    NEED_RESET(ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i], 0.01,0.001,3.));
                     break;
                 case lt::Params::Type::VEC3:
                     NEED_RESET(ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
@@ -499,6 +499,8 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.f, 0.f, 0.0f, 1.00f);
     //ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
    
+    //lt::GGXMicrosurface ggx_ms(0.4,0.5);
+
 
     AppData app_data;
     AppInit(app_data);

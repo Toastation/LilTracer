@@ -57,7 +57,7 @@ inline vec3 square_to_cosine_hemisphere(Float u1, Float u2) {
   return vec3(dx, dy, z);
 }
 
-inline Float square_to_cosine_hemisphere_pdf(vec3 w) { return w[2] / pi; }
+inline Float square_to_cosine_hemisphere_pdf(const vec3& w) { return w[2] / pi; }
 
 inline void orthonormal_basis(const vec3 &n, vec3 &t, vec3 &b) {
   if (n.z < -0.999999) {

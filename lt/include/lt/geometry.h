@@ -136,8 +136,8 @@ class Mesh : public Geometry {
     vec3 n2 = normal[face_nor.y];
     vec3 n3 = normal[face_nor.z];
 
-    return n1 * rayhit.hit.u + n2 * rayhit.hit.v +
-           n3 * (1 - rayhit.hit.u - rayhit.hit.v);
+    return glm::normalize(n2 * rayhit.hit.u + n3 * rayhit.hit.v +
+           n1 * (1 - rayhit.hit.u - rayhit.hit.v));
   }
 
   std::string filename;     /**< Filename of the OBJ file. */

@@ -235,7 +235,11 @@ class PathIntegrator : public Integrator {
         // Compute BRDF  contrib
         vec3 wi = si.to_local(-r.d);
         vec3 wo = si.brdf->sample(wi, sampler);
-        Float wo_pdf = si.brdf->pdf(wo);
+        
+        if (wo.z < 0.001)
+            break;
+
+        Float wo_pdf = si.brdf->pdf(wi,wo);
         Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
         attenuation *= brdf_cos_weighted / wo_pdf;
 
