@@ -406,7 +406,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
                     auto ms_per_pix = app_data.ren_dir_light.render(app_data.scn_dir_light);
-                    std::cout << ms_per_pix << std::endl;
+                    //std::cout << ms_per_pix << std::endl;
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {

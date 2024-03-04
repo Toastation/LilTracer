@@ -38,10 +38,18 @@ inline vec3 polar_to_card(Float theta, Float phi) {
   return vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 }
 
+inline vec3 square_to_uniform_sphere(Float u1, Float u2) {
+    Float z = 1. - 2. *u1;
+    Float r = std::sqrt(std::max(0., 1. - z * z));
+    Float ph = 2. * pi * u2;
+    return vec3(r * cos(ph), r * sin(ph), z);
+}
+
+inline Float square_to_uniform_sphere_pdf() { return 1. / (4. * pi); }
+
 inline vec3 square_to_uniform_hemisphere(Float u1, Float u2) {
   Float z = u1;
   Float r = std::sqrt(std::max(0., 1. - z * z));
-  ;
   Float ph = 2. * pi * u2;
   return vec3(r * cos(ph), r * sin(ph), z);
 }

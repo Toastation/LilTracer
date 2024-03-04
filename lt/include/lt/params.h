@@ -16,11 +16,12 @@ struct Params {
    * @brief Enum defining the types of parameters.
    */
   enum class Type {
-    FLOAT, /**< Float type parameter. */
-    VEC3,  /**< Vector3 type parameter. */
-    SH,    /**< Spherical Harmonics type parameter. */
-    PATH,  /**< Path type parameter. */
-    BRDF   /**< BRDF type parameter. */
+    FLOAT,  /**< Float type parameter. */
+    VEC3,   /**< Vector3 type parameter. */
+    SH,     /**< Spherical Harmonics type parameter. */
+    PATH,   /**< Path type parameter. */
+    BRDF,   /**< BRDF type parameter. */
+    TEXTURE /**< Texture type parameter. */
   };
 
   int count = 0;                  /**< Count of parameters. */

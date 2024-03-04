@@ -22,7 +22,7 @@ static int save_sensor_exr(const Sensor& sen, const std::string& filename) {
 
 
 
-static int load_texture_exr(const std::string& filename, Texture& t) {
+static int load_texture_exr(const std::string& filename, Texture<Spectrum>& t) {
     float* out;
     int width;
     int height;
@@ -45,6 +45,8 @@ static int load_texture_exr(const std::string& filename, Texture& t) {
     }
 
     delete[] out;
+
+    return TINYEXR_SUCCESS;
 };
 
 

@@ -53,9 +53,6 @@ class Scene {
       return true;
     }
 
-    si.u = (glm::atan(r.d.z, r.d.x) + pi) / ( 2 * pi );
-    si.v = glm::acos(r.d.y) / pi;
-
     return false;
   }
 

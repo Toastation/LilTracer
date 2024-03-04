@@ -1,4 +1,4 @@
-set(PROGRAM_NAME brdf_viewer)
+set(PROGRAM_NAME envmap_sampling)
 
 add_executable(${PROGRAM_NAME} main.cpp)
 

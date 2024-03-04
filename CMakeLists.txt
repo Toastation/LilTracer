@@ -22,15 +22,13 @@ include(clang_format)
 add_subdirectory(lt)
 add_clang_format_target(format-liltracer lt)
 
-
 # ----------------------------------------------------------------------------
 # Applications
 # ----------------------------------------------------------------------------
 
 add_subdirectory(apps/brdf_viewer)
-
 add_subdirectory(apps/renderer)
-
+add_subdirectory(apps/envmap_sampling)
 
 # ----------------------------------------------------------------------------
 # Documentation

@@ -25,7 +25,11 @@ inline bool prob_scn(Scene& scn, Renderer& ren) {
 				{"type":"Diffuse","name":"floor","albedo":[0.4,0.4,0.4]},
 				{"type":"Diffuse","name":"mat","albedo":[0.5,0.4,0.3]}
 			],
-			"light": [
+			"background" : {
+				"type":"EnvironmentLight",
+				"texture":"kloofendal_48d_partly_cloudy_puresky_1k.exr" 
+			},
+			"nlight": [
 				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [0.0, -1.0, 1.0] },
 				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [1.0, -1.0, 1.0] }
 			],
@@ -106,7 +110,7 @@ inline bool dir_light(Scene& scn, Renderer& ren) {
 			},
 			"camera": {
 				"type":"PerspectiveCamera",
-				"fov" : 90,
+				"fov" : 30,
 				"aspect" : 1.0,
 				"center" : [0.0,0.0,0.0],
 				"pos" : [5.0,0.0,0.0]

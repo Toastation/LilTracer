@@ -58,6 +58,11 @@ static void json_set_brdf(const json &j, std::shared_ptr<Brdf> *ptr,
   *ptr = ref[brdf_name];
 }
 
+static void json_set_texture(const json& j, Texture<Spectrum>* ptr) {
+    std::string texture_name = j;
+    load_texture_exr(texture_name, *ptr);
+}
+
 /**
  * @brief Set parameters from JSON.
  * @param j The JSON object.
@@ -79,9 +84,11 @@ static void set_params(const json &j, const Params &params,
           json_set_path(j[params.names[i]], (std::string *)params.ptrs[i]);
           break;
         case Params::Type::BRDF:
-          json_set_brdf(j[params.names[i]],
-                        (std::shared_ptr<Brdf> *)params.ptrs[i], brdf_ref);
+          json_set_brdf(j[params.names[i]], (std::shared_ptr<Brdf> *)params.ptrs[i], brdf_ref);
           break;
+        case Params::Type::TEXTURE:
+            json_set_texture(j[params.names[i]], (Texture<Spectrum>*)params.ptrs[i]);
+            break;
         default:
           std::cerr << "json to Params::Type not defined" << std::endl;
           break;
@@ -122,9 +129,6 @@ static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren
     // Initialize sampler in the renderer
     ren.sampler = std::make_shared<Sampler>();
 
-    //
-    scn.envmap = std::make_shared<EnvironmentLight>();
-    scn.envmap->init();
 
     // Parse Integrator
     if (json_scn.contains("integrator")) {
@@ -198,6 +202,25 @@ static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren
     }
     else {
         std::cerr << "Abort generate_from_json, cause : Missing brdf" << std::endl;
+    }
+
+    // Parse Background
+    if (json_scn.contains("background")) {
+        json json_background = json_scn["background"];
+        std::shared_ptr<Light> envmap =
+            Factory<Light>::create(json_background["type"]);
+
+        if (!envmap) return false;
+
+        // Set parameters and initialize the camera
+        set_params(json_background, envmap->params, brdf_ref);
+        envmap->init();
+
+        // Set the camera in the renderer
+        scn.envmap = std::dynamic_pointer_cast<EnvironmentLight> (envmap);
+    }
+    else {
+        scn.envmap = std::make_shared<EnvironmentLight>();
     }
 
     // Parse Light

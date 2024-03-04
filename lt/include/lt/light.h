@@ -29,6 +29,8 @@ class Light : public Serializable {
    * @return The sampled light direction.
    */
   virtual vec3 sample_light_direction(Sampler& sampler) = 0;
+
+  virtual Spectrum eval(const vec3& direction) = 0;
 };
 
 /**
@@ -47,6 +49,8 @@ class DirectionnalLight : public Light {
    * @return The direction of the light.
    */
   vec3 sample_light_direction(Sampler& sampler) { return dir; }
+
+  Spectrum eval(const vec3& direction) { return Spectrum(intensity); }
 
   /**
    * @brief Initialize the directional light.
@@ -78,16 +82,92 @@ public:
         link_params();
     }
 
-    vec3 sample_light_direction(Sampler& sampler) { return square_to_uniform_hemisphere(sampler.next_float(), sampler.next_float()); }
+    vec3 sample_light_direction(Sampler& sampler) {
+#if 0
+        return square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
+#endif // 0
+#if 1
+        Float u = sampler.next_float();
+        
+        int id = std::distance(c.begin(), std::lower_bound(c.begin(), c.end(), u));
+        
+        int y = id / envmap.w;
+        y = envmap.h - y - 1;
+        int x = id % envmap.w;
+
+        Float theta = pi * ((Float)y + 0.5) / (Float)envmap.h;
+        Float phi = pi + 2. * pi * ((Float)x + 0.5) / (Float)envmap.w;
+
+        theta += dtheta * (sampler.next_float() - 0.5 );
+        phi += dphi * (sampler.next_float() - 0.5);
+
+        //return vec3(x,y,0);
+        return polar_to_card(theta, phi);
+
+#endif
+    }
     
-    void init() { 
-        load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", texture);
+    Spectrum eval(const vec3& direction) {
+        Float u = (glm::atan(direction.z, direction.x) + pi) / (2 * pi);
+        Float v = glm::acos(direction.y) / pi;
+        return envmap.eval(u, v);
+    }
+    
+    void compute_density() {
+
+        // Compute density
+        density.w = envmap.w;
+        density.h = envmap.h;
+        density.initialize();
+
+        for (int y = 0; y < envmap.h; y++) {
+            Float theta = pi * ((Float)y + 0.5) / (Float)envmap.h;
+            Float sin_theta = std::sin(theta);
+            // dphi * dtheta are constant
+            Float solid_angle = sin_theta;// *dphi* dtheta;
+            for (int x = 0; x < envmap.w; x++) {
+                Spectrum s = envmap.get(x, y);
+                Float mean = (s.r + s.g + s.b) * 0.333333f;
+                density.set(x, y, mean*solid_angle);
+            }
+        }
+
+        // Compute cumulative density
+        cumulative_density.w = envmap.w;
+        cumulative_density.h = envmap.h;
+        cumulative_density.initialize();
+        cumulative_density.data[0] = density.data[0];
+        for (int n = 1; n < envmap.w *envmap.h; n++) {
+            cumulative_density.data[n] = cumulative_density.data[n - 1] + density.data[n];
+        }
+
+        
+        // Normalize density
+        for (int n = 0; n < envmap.w * envmap.h; n++) {
+            cumulative_density.data[n] /= cumulative_density.data[envmap.w * envmap.h-1];
+        }
+
     }
 
-    Texture texture;
+    void init() {
+        dtheta = pi / (Float)envmap.h;
+        dphi = 2. * pi / (Float)envmap.w;
+
+        compute_density();
+        c = std::vector<float>(cumulative_density.data, cumulative_density.data + cumulative_density.w * cumulative_density.h);
+    }
+
+    
+    Texture<Spectrum> envmap;
+    Texture<Float> density;
+    Texture<Float> cumulative_density;
+    std::vector<Float> c;
+    Float dtheta;
+    Float dphi;
 
 protected:
     void link_params() {
+        params.add("texture", Params::Type::TEXTURE, &envmap);
     }
 };
 

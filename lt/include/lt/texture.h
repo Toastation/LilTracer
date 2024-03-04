@@ -4,15 +4,16 @@
 
 namespace LT_NAMESPACE {
 
+template<typename DATA_TYPE>
 struct Texture {
-	bool init;
 	size_t w;
 	size_t h;
-	Spectrum* data;
+	DATA_TYPE* data;
 
-	Texture() : init(false), data(nullptr), w(0), h(0) {}
+	Texture() : data(nullptr), w(1), h(1) {
+		initialize();
+	}
 	Texture(const size_t& w, const size_t& h) :
-		init(false),
 		data(nullptr),
 		w(w),
 		h(h)
@@ -21,29 +22,32 @@ struct Texture {
 	}
 
 	~Texture() {
-		if (init) {
-			delete[] data;
-			data = nullptr;
-		}
+		delete[] data;
 	}
 
 	void initialize() {
-		data = new Spectrum[w * h];
-		init = true;
+		delete[] data;
+		data = new DATA_TYPE[w * h]();
 	}
 
-	void set(const size_t& x, const size_t& y, const Spectrum& s) {
-		data[x * h + y] = s;
+	void set(const size_t& x, const size_t& y, const DATA_TYPE& s) {
+		data[y * w + x] = s;
 	}
 
-	Spectrum get(const size_t& x, const size_t& y) {
-		return data[x * h + y];
+	DATA_TYPE get(const size_t& x, const size_t& y) {
+		return data[y * w + x];
 	}
 
-	Spectrum eval(const SurfaceInteraction& si) {
+	DATA_TYPE eval(const SurfaceInteraction& si) {
 		size_t x = std::max(std::min(size_t(si.u * (Float)w), w - 1), (size_t)0);
 		size_t y = std::max(std::min(size_t(si.v * (Float)h), h - 1), (size_t)0);
 		return get(x,y);
+	}
+
+	DATA_TYPE eval(const Float& u, const Float& v) {
+		size_t x = std::max(std::min(size_t(u * (Float)w), w - 1), (size_t)0);
+		size_t y = std::max(std::min(size_t(v * (Float)h), h - 1), (size_t)0);
+		return get(x, y);
 	}
 
 };

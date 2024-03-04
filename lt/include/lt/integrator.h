@@ -172,7 +172,7 @@ class Integrator : public Serializable {
     vec3 wi = si.to_local(-r.d);
 
     Ray rs(si.pos - r.d * 0.0001f, -l);
-    if (!scene.intersect(rs)) return si.brdf->eval(wi, wo);
+    if (!scene.intersect(rs)) return si.brdf->eval(wi, wo) * light->eval(l);
     return Spectrum(0.);
   }
 
@@ -199,10 +199,9 @@ class DirectIntegrator : public Integrator {
 
       s += uniform_sample_one_light(r, si, scene, sampler);
     }
-    /*else {
-        s = Spectrum(si.v);
-        s = scene.envmap->texture.eval(si);
-    }*/
+    else {
+        s = scene.envmap->eval(r.d);
+    }
 
     return s;
   }
@@ -250,7 +249,7 @@ class PathIntegrator : public Integrator {
         r = Ray(p, si.to_world(wo));
       } else {
         float a = 0.5 * (r.d.y + 1.0);
-        Spectrum bg_color = scene.envmap->texture.eval(si);
+        Spectrum bg_color = scene.envmap->eval(r.d);
         //    ((1.0f - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
         s += attenuation * bg_color;
         break;
