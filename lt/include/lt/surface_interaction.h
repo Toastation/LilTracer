@@ -18,7 +18,7 @@ class SurfaceInteraction {
    * and initializes brdf to nullptr.
    */
   SurfaceInteraction()
-      : nor(vec3(0.)), pos(vec3(0.)), t(1000000.), brdf(nullptr) {}
+      : nor(vec3(0.)), pos(vec3(0.)), t(1000000.), u(0.), v(0.), brdf(nullptr) {}
 
   /**
    * @brief Constructor for SurfaceInteraction.
@@ -28,11 +28,15 @@ class SurfaceInteraction {
    * value, and initializes brdf to nullptr.
    */
   SurfaceInteraction(vec3 pos, vec3 nor)
-      : nor(nor), pos(pos), t(1000000.), brdf(nullptr) {}
+      : nor(nor), pos(pos), t(1000000.), u(0.), v(0.), brdf(nullptr) {}
   vec3 nor;                   /**< Normal at the intersection point. */
   vec3 pos;                   /**< Position of the intersection point. */
   Float t;                    /**< Distance to the intersection point. */
+  Float u;
+  Float v;                
   std::shared_ptr<Brdf> brdf; /**< Pointer to the surface BRDF. */
+
+
 
   glm::mat3 tbn;     /**< Tangent-Bitangent-Normal matrix. */
   glm::mat3 inv_tbn; /**< Inverse Tangent-Bitangent-Normal matrix. */

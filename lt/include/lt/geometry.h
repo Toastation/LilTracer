@@ -6,7 +6,7 @@
 #pragma once
 
 #include <embree3/rtcore.h>
-#include <fast_obj.h>
+#include <fast_obj/fast_obj.h>
 #include <lt/brdf.h>
 #include <lt/lt_common.h>
 #include <lt/ray.h>

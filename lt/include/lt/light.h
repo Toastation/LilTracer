@@ -8,6 +8,8 @@
 #include <lt/factory.h>
 #include <lt/lt_common.h>
 #include <lt/serialize.h>
+#include <lt/texture.h>
+#include <lt/io_exr.h>
 
 namespace LT_NAMESPACE {
 
@@ -26,7 +28,7 @@ class Light : public Serializable {
    * @brief Pure virtual function for sampling light direction.
    * @return The sampled light direction.
    */
-  virtual vec3 sample_light_direction() = 0;
+  virtual vec3 sample_light_direction(Sampler& sampler) = 0;
 };
 
 /**
@@ -44,7 +46,7 @@ class DirectionnalLight : public Light {
    * @brief Sample the direction of the light.
    * @return The direction of the light.
    */
-  vec3 sample_light_direction() { return dir; }
+  vec3 sample_light_direction(Sampler& sampler) { return dir; }
 
   /**
    * @brief Initialize the directional light.
@@ -72,13 +74,17 @@ class DirectionnalLight : public Light {
  */
 class EnvironmentLight : public Light {
 public:
-    EnvironmentLight() : Light("EnvironmentLight") { link_params(); }
+    EnvironmentLight() : Light("EnvironmentLight") { 
+        link_params();
+    }
 
-    vec3 sample_light_direction() { return dir; }
+    vec3 sample_light_direction(Sampler& sampler) { return square_to_uniform_hemisphere(sampler.next_float(), sampler.next_float()); }
+    
+    void init() { 
+        load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", texture);
+    }
 
-    void init() { dir = glm::normalize(dir); }
-
-    vec3 dir = vec3(1, 0, 0); 
+    Texture texture;
 
 protected:
     void link_params() {

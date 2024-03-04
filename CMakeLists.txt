@@ -29,6 +29,9 @@ add_clang_format_target(format-liltracer lt)
 
 add_subdirectory(apps/brdf_viewer)
 
+add_subdirectory(apps/renderer)
+
+
 # ----------------------------------------------------------------------------
 # Documentation
 # ----------------------------------------------------------------------------

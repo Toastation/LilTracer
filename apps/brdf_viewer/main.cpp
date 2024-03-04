@@ -85,7 +85,6 @@ void AppInit(AppData& app_data) {
     app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
     app_data.current_brdf_idx = 0;
     
-    
     lt::dir_light(app_data.scn_dir_light, app_data.ren_dir_light);
     app_data.rsen_dir_light.sensor = app_data.ren_dir_light.sensor;
     app_data.rsen_dir_light.initialize();

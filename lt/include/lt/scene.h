@@ -53,6 +53,9 @@ class Scene {
       return true;
     }
 
+    si.u = (glm::atan(r.d.z, r.d.x) + pi) / ( 2 * pi );
+    si.v = glm::acos(r.d.y) / pi;
+
     return false;
   }
 
@@ -110,6 +113,12 @@ class Scene {
   std::vector<std::shared_ptr<Light>>
       lights; /**< Vector of light in the scene. */
   std::vector<std::shared_ptr<Brdf>> brdfs; /**< Vector of BRDF in the scene. */
+  std::shared_ptr<EnvironmentLight> envmap;
 };
+
+
+
+
+
 
 }  // namespace LT_NAMESPACE

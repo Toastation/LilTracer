@@ -167,7 +167,7 @@ class Integrator : public Serializable {
   Spectrum estimate_direct(Ray &r, SurfaceInteraction &si,
                            const std::shared_ptr<Light> &light, Scene &scene,
                            Sampler &sampler) {
-    vec3 l = light->sample_light_direction();
+    vec3 l = light->sample_light_direction(sampler);
     vec3 wo = si.to_local(-l);
     vec3 wi = si.to_local(-r.d);
 
@@ -199,6 +199,10 @@ class DirectIntegrator : public Integrator {
 
       s += uniform_sample_one_light(r, si, scene, sampler);
     }
+    /*else {
+        s = Spectrum(si.v);
+        s = scene.envmap->texture.eval(si);
+    }*/
 
     return s;
   }
@@ -246,8 +250,8 @@ class PathIntegrator : public Integrator {
         r = Ray(p, si.to_world(wo));
       } else {
         float a = 0.5 * (r.d.y + 1.0);
-        Spectrum bg_color =
-            ((1.0f - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
+        Spectrum bg_color = scene.envmap->texture.eval(si);
+        //    ((1.0f - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
         s += attenuation * bg_color;
         break;
       }
