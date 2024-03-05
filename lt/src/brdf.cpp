@@ -10,6 +10,7 @@ float Brdf::pdf(const vec3& wi,const vec3& wo) { return square_to_cosine_hemisph
 
 Factory<Brdf>::CreatorRegistry &Factory<Brdf>::registry() {
   static Factory<Brdf>::CreatorRegistry registry{
+      {"Emissive", std::make_shared<Emissive>},
       {"Diffuse", std::make_shared<Diffuse>},
       {"GGXMicrosurface", std::make_shared<GGXMicrosurface>},
       {"RoughConductor", std::make_shared<RoughConductor>},

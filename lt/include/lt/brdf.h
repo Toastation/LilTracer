@@ -32,7 +32,7 @@ class Brdf : public Serializable {
    * @param wo Outgoing direction.
    * @return The evaluated spectrum.
    */
-  virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
+  virtual Spectrum eval(vec3 wi, vec3 wo) { return Spectrum(0.); };
 
   /**
    * @brief Samples the BRDF.
@@ -48,6 +48,23 @@ class Brdf : public Serializable {
    * @return The density value.
    */
   virtual float pdf(const vec3& wi, const vec3& wo);
+
+  virtual bool emissive() { return false; }
+  virtual Spectrum emission() { return Spectrum(0.); }
+
+};
+
+class Emissive : public Brdf {
+public:
+    PARAMETER(Spectrum, intensity, 1.); /**< Albedo of the surface. */
+
+    Emissive() : Brdf("Emissive") { link_params(); }
+
+    bool emissive() { return true; }
+    Spectrum emission() { return intensity; }
+
+protected:
+    void link_params() { params.add("intensity", Params::Type::VEC3, &intensity); }
 };
 
 /**

@@ -172,12 +172,67 @@ class Integrator : public Serializable {
     vec3 wi = si.to_local(-r.d);
 
     Ray rs(si.pos - r.d * 0.0001f, -l);
-    if (!scene.intersect(rs)) return si.brdf->eval(wi, wo) * light->eval(l);
+    if (!scene.intersect(rs)) return si.brdf->eval(wi, wo) * light->eval(l) / light->pdf(l);
     return Spectrum(0.);
   }
 
   uint32_t n_sample;
 };
+
+
+/**
+ * @brief Direct lighting integrator class.
+ */
+class BrdfIntegrator : public Integrator {
+public:
+    BrdfIntegrator() : Integrator("BrdfIntegrator") { link_params(); };
+
+    Spectrum render_pixel_rec(Ray& r, Scene& scene, Sampler& sampler, const int& depth) {
+        SurfaceInteraction si;
+
+        Spectrum s(0.);
+
+        if (scene.intersect(r, si)) {
+
+            // Continue if there is no brdf
+            if (!si.brdf) {
+                r = Ray(si.pos + r.d * 0.00001f, r.d);
+                return render_pixel_rec(r, scene, sampler, depth);
+            }
+
+            if (depth > 10 || si.brdf->emissive())
+                return si.brdf->emission();
+
+            // Compute BRDF  contrib
+            vec3 wi = si.to_local(-r.d);
+            vec3 wo = si.brdf->sample(wi, sampler);
+            Float pdf = si.brdf->pdf(wi, wo);
+            Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
+
+            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(wo));
+            Spectrum indirect = render_pixel_rec(r_, scene, sampler,depth+1);
+
+            s += brdf_cos_weighted * indirect / pdf;
+        }
+        /*else {
+            for (const auto& light : scene.infinite_lights)
+                s += light->eval(r.d);
+        }*/
+
+        return s;
+    }
+
+
+    Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler) {
+        return render_pixel_rec(r, scene, sampler, 0);
+    }
+
+protected:
+    void link_params() {}
+};
+
+
+
 
 /**
  * @brief Direct lighting integrator class.
@@ -200,7 +255,8 @@ class DirectIntegrator : public Integrator {
       s += uniform_sample_one_light(r, si, scene, sampler);
     }
     else {
-        s = scene.envmap->eval(r.d);
+        for(const auto& light : scene.infinite_lights) 
+            s += light->eval(r.d);
     }
 
     return s;
@@ -248,10 +304,10 @@ class PathIntegrator : public Integrator {
 
         r = Ray(p, si.to_world(wo));
       } else {
-        float a = 0.5 * (r.d.y + 1.0);
-        Spectrum bg_color = scene.envmap->eval(r.d);
-        //    ((1.0f - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
-        s += attenuation * bg_color;
+        
+        for (const auto& light : scene.infinite_lights)
+            s += attenuation * light->eval(r.d);
+
         break;
       }
     }

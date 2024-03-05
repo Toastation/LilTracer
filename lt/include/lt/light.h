@@ -31,6 +31,8 @@ class Light : public Serializable {
   virtual vec3 sample_light_direction(Sampler& sampler) = 0;
 
   virtual Spectrum eval(const vec3& direction) = 0;
+
+  virtual Float pdf(const vec3& direction) = 0;
 };
 
 /**
@@ -51,6 +53,7 @@ class DirectionnalLight : public Light {
   vec3 sample_light_direction(Sampler& sampler) { return dir; }
 
   Spectrum eval(const vec3& direction) { return Spectrum(intensity); }
+  Float pdf(const vec3& direction) { return 1.; }
 
   /**
    * @brief Initialize the directional light.
@@ -101,16 +104,26 @@ public:
         theta += dtheta * (sampler.next_float() - 0.5 );
         phi += dphi * (sampler.next_float() - 0.5);
 
-        //return vec3(x,y,0);
-        return polar_to_card(theta, phi);
 
+        return vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 #endif
     }
     
     Spectrum eval(const vec3& direction) {
         Float u = (glm::atan(direction.z, direction.x) + pi) / (2 * pi);
         Float v = glm::acos(direction.y) / pi;
-        return envmap.eval(u, v);
+        return envmap.eval(u, v) * intensity;
+    }
+
+    Float pdf(const vec3& direction) {
+#if 0
+        return square_to_uniform_sphere_pdf();
+#endif
+#if 1
+        Float u = (glm::atan(direction.z, direction.x) + pi) / (2 * pi);
+        Float v = glm::acos(direction.y) / pi;
+        return density.eval(u, v);
+#endif
     }
     
     void compute_density() {
@@ -123,12 +136,11 @@ public:
         for (int y = 0; y < envmap.h; y++) {
             Float theta = pi * ((Float)y + 0.5) / (Float)envmap.h;
             Float sin_theta = std::sin(theta);
-            // dphi * dtheta are constant
-            Float solid_angle = sin_theta;// *dphi* dtheta;
+            Float solid_angle = sin_theta * dphi * dtheta;
             for (int x = 0; x < envmap.w; x++) {
                 Spectrum s = envmap.get(x, y);
                 Float mean = (s.r + s.g + s.b) * 0.333333f;
-                density.set(x, y, mean*solid_angle);
+                density.set(x, y, mean * solid_angle);
             }
         }
 
@@ -144,7 +156,8 @@ public:
         
         // Normalize density
         for (int n = 0; n < envmap.w * envmap.h; n++) {
-            cumulative_density.data[n] /= cumulative_density.data[envmap.w * envmap.h-1];
+            density.data[n] /= cumulative_density.data[envmap.w * envmap.h - 1];
+            cumulative_density.data[n] /= cumulative_density.data[envmap.w * envmap.h - 1];
         }
 
     }
@@ -159,6 +172,8 @@ public:
 
     
     Texture<Spectrum> envmap;
+    Float intensity;
+
     Texture<Float> density;
     Texture<Float> cumulative_density;
     std::vector<Float> c;
@@ -168,6 +183,7 @@ public:
 protected:
     void link_params() {
         params.add("texture", Params::Type::TEXTURE, &envmap);
+        params.add("intensity", Params::Type::FLOAT, &intensity);
     }
 };
 

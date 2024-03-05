@@ -58,7 +58,12 @@ class Sensor {
     uint32_t idx = y * w + x;
     acculumator[idx] += s;
     count[idx]++;
-    value[idx] = glm::pow(acculumator[idx] / Spectrum(count[idx]),Spectrum(0.4545));
+    
+    // Tonemapping
+    Spectrum v = acculumator[idx] / Spectrum(count[idx]);
+    value[idx] = v / (Spectrum(1.) + v);
+    // Gamma correction
+    value[idx] = glm::pow(value[idx], Spectrum(0.4545));
   }
 
   /**
@@ -70,9 +75,13 @@ class Sensor {
    */
   void set(const uint32_t &x, const uint32_t &y, Spectrum s) {
     uint32_t idx = y * w + x;
-    value[idx] = glm::pow(s, Spectrum(0.4545));
     acculumator[idx] = s;
     count[idx] = 1;
+
+    // Tonemapping
+    value[idx] = s / (Spectrum(1.) + s);
+    // Gamma correction
+    value[idx] = glm::pow(value[idx], Spectrum(0.4545));
   }
 
   /**

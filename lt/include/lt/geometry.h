@@ -40,6 +40,7 @@ class Geometry : public Serializable {
 
   std::shared_ptr<Brdf>
       brdf; /**< Pointer to the BRDF associated with the geometry. */
+
   RTCGeometry rtc_geom; /**< Embree RTC geometry. */
 };
 

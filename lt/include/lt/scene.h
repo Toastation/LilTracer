@@ -110,7 +110,7 @@ class Scene {
   std::vector<std::shared_ptr<Light>>
       lights; /**< Vector of light in the scene. */
   std::vector<std::shared_ptr<Brdf>> brdfs; /**< Vector of BRDF in the scene. */
-  std::shared_ptr<EnvironmentLight> envmap;
+  std::vector<std::shared_ptr<Light>> infinite_lights; 
 };
 
 

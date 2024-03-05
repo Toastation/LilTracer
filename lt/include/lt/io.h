@@ -217,10 +217,7 @@ static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren
         envmap->init();
 
         // Set the camera in the renderer
-        scn.envmap = std::dynamic_pointer_cast<EnvironmentLight> (envmap);
-    }
-    else {
-        scn.envmap = std::make_shared<EnvironmentLight>();
+        scn.infinite_lights.push_back(envmap);
     }
 
     // Parse Light
@@ -256,6 +253,8 @@ static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren
 
             // Add the geometry to the scene
             scn.geometries.push_back(geometry);
+
+
         }
     }
     else {
