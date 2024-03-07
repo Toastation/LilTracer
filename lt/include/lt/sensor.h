@@ -61,7 +61,8 @@ class Sensor {
     
     // Tonemapping
     Spectrum v = acculumator[idx] / Spectrum(count[idx]);
-    value[idx] = v / (Spectrum(1.) + v);
+    //value[idx] = v / (Spectrum(1.) + v);
+    value[idx] = v;
     // Gamma correction
     value[idx] = glm::pow(value[idx], Spectrum(0.4545));
   }
@@ -79,7 +80,8 @@ class Sensor {
     count[idx] = 1;
 
     // Tonemapping
-    value[idx] = s / (Spectrum(1.) + s);
+    // value[idx] = s / (Spectrum(1.) + s);
+    value[idx] = s;
     // Gamma correction
     value[idx] = glm::pow(value[idx], Spectrum(0.4545));
   }
