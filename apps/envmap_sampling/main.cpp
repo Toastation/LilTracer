@@ -23,7 +23,7 @@ static bool need_reset;
 
 struct RenderTexture {
     GLuint texture_id;
-    lt::Texture<Float>* texture = nullptr;
+    lt::Texture<lt::Spectrum>* texture = nullptr;
     bool initialized = false;
 
 
@@ -35,7 +35,7 @@ struct RenderTexture {
 
 
         glBindTexture(GL_TEXTURE_2D, texture_id);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->w, texture->h, 0, GL_RED, GL_FLOAT, (float*)texture->data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->w, texture->h, 0, GL_RGB, GL_FLOAT, (float*)texture->data);
         return true;
     }
 
@@ -79,7 +79,7 @@ void AppInit(AppData& app_data) {
     app_data.envmap = std::make_shared<lt::EnvironmentLight>();
     lt::load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", app_data.envmap->envmap);
     app_data.envmap->init();
-    app_data.rt.texture = &app_data.envmap->density;
+    app_data.rt.texture = &app_data.envmap->envmap;
     app_data.rt.initialize();
 
     app_data.sampler.seed(0);
@@ -92,8 +92,8 @@ void AppInit(AppData& app_data) {
         lt::vec3 emission;
         Float pdf;
         app_data.envmap->sample(lt::SurfaceInteraction(), app_data.samples[i], emission, pdf, app_data.sampler);
-        app_data.x[i] = (std::atan2(app_data.samples[i].y, app_data.samples[i].x) + lt::pi) / (2. * lt::pi) * (float)app_data.envmap->envmap.w; // app_data.samples[i].x;//
-        app_data.y[i] = std::acos(app_data.samples[i].z) / lt::pi * (float)app_data.envmap->envmap.h; // app_data.samples[i].y;// 
+        app_data.x[i] = (std::atan2(app_data.samples[i].z, app_data.samples[i].x) + lt::pi) / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
+        app_data.y[i] = std::acos(app_data.samples[i].y) / lt::pi * (float)app_data.envmap->envmap.h;
     }
 
 }

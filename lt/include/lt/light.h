@@ -113,8 +113,8 @@ public:
         phi += dphi * (sampler.next_float() - 0.5);
 
 
+        pdf = density.get(x, y);
         direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
-        pdf = density.eval(x, y);
 #endif
         emission = eval(direction);
     }

@@ -142,7 +142,7 @@ class Integrator : public Serializable {
    */
   Spectrum uniform_sample_one_light(Ray &r, SurfaceInteraction &si,
                                     Scene &scene, Sampler &sampler) {
-    int n_light = scene.lights.size();
+    int n_light = scene.lights.size() + scene.infinite_lights.size();
 
     if (n_light == 0) return Spectrum(0.);
 
@@ -150,7 +150,7 @@ class Integrator : public Serializable {
         std::min((int)(sampler.next_float() * n_light), n_light - 1);
     Float light_pdf = (Float)(1.) / n_light;
 
-    const std::shared_ptr<Light> &light = scene.lights[light_idx];
+    const std::shared_ptr<Light> &light = light_idx < scene.lights.size() ? scene.lights[light_idx] : scene.infinite_lights[n_light - light_idx - 1];
 
     return estimate_direct(r, si, light, scene, sampler) / light_pdf;
   }
@@ -228,10 +228,10 @@ public:
 
             s += brdf_cos_weighted * indirect / pdf;
         }
-        /*else {
+        else {
             for (const auto& light : scene.infinite_lights)
                 s += light->eval(r.d);
-        }*/
+        }
 
         return s;
     }

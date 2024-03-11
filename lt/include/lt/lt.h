@@ -59,7 +59,7 @@ inline bool prob_scn(Scene& scn, Renderer& ren) {
 	return generate_from_json(R"(
 	   	{
 			"integrator": {
-				"type":"PathIntegrator"
+				"type":"DirectIntegrator"
 			},
 			"brdf": [
 				{"type":"Diffuse","name":"base","albedo":[0.2,0.2,0.2]},
@@ -69,7 +69,7 @@ inline bool prob_scn(Scene& scn, Renderer& ren) {
 			"background" : {
 				"type":"EnvironmentLight",
 				"texture":"kloofendal_48d_partly_cloudy_puresky_1k.exr",
-				"intensity" : 1.0
+				"intensity" : 0.0001
 			},
 			"nlight": [
 				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [0.0, -1.0, 1.0] },
