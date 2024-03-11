@@ -70,7 +70,7 @@ inline bool prob_scn(Scene& scn, Renderer& ren)
 			"background" : {
 				"type":"EnvironmentLight",
 				"texture":"kloofendal_48d_partly_cloudy_puresky_1k.exr",
-				"intensity" : 0.0001
+				"intensity" : 1.0
 			},
 			"nlight": [
 				{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [0.0, -1.0, 1.0] },

@@ -33,7 +33,7 @@ public:
      * @param wo Outgoing direction.
      * @return The evaluated spectrum.
      */
-    virtual Spectrum eval(vec3 wi, vec3 wo) { return Spectrum(0.); };
+    virtual Spectrum eval(vec3 wi, vec3 wo);
 
     /**
      * @brief Samples the BRDF.
@@ -50,13 +50,13 @@ public:
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
 
-    virtual bool emissive() { return false; }
-    virtual Spectrum emission() { return Spectrum(0.); }
+    virtual bool emissive();
+    virtual Spectrum emission();
 };
 
 class Emissive : public Brdf {
 public:
-    PARAMETER(Spectrum, intensity, 1.); /**< Albedo of the surface. */
+    PARAMETER(Spectrum, intensity, 1.); /**< Intensity of emission. */
 
     Emissive()
         : Brdf("Emissive")
@@ -87,55 +87,10 @@ public:
         link_params();
     }
 
-    Spectrum eval(vec3 wi, vec3 wo)
-    {
-        return albedo / pi * glm::clamp(wo[2], 0.f, 1.f);
-    }
+    Spectrum eval(vec3 wi, vec3 wo);
 
 protected:
     void link_params() { params.add("albedo", Params::Type::VEC3, &albedo); }
-};
-
-/**
- * @brief Rough Conductor BRDF class.
- */
-class RoughConductor : public Brdf {
-public:
-    PARAMETER(Float, alpha_x, 0.5); /**< Roughness value in x-direction. */
-    PARAMETER(Float, alpha_y, 0.5); /**< Roughness value in y-direction. */
-
-    RoughConductor()
-        : Brdf("RoughConductor")
-    {
-        link_params();
-    }
-
-    static Float D_ggx(const vec3& wh, const Float& ax, const Float& ay)
-    {
-        return wh[2];
-    }
-
-    static Float G1_ggx(const vec3& w, const Float& ax, const Float& ay)
-    {
-        return 1.;
-    }
-
-    Spectrum eval(vec3 wi, vec3 wo)
-    {
-        vec3 wh = glm::normalize(wi + wo);
-
-        Float D = D_ggx(wh, alpha_x, alpha_y);
-        Float G = G1_ggx(wi, alpha_x, alpha_y) * G1_ggx(wi, alpha_x, alpha_y);
-        return vec3(
-            D * G / (4. * glm::clamp(wi[2], 0.f, 1.f) * glm::clamp(wo[2], 0.f, 1.f)));
-    }
-
-protected:
-    void link_params()
-    {
-        params.add("alpha_x", Params::Type::FLOAT, &alpha_x);
-        params.add("alpha_y", Params::Type::FLOAT, &alpha_y);
-    }
 };
 
 /**
@@ -158,7 +113,7 @@ public:
         link_params();
     }
 
-    Spectrum eval(vec3 wi, vec3 wo) { return Spectrum(wo.z); }
+    Spectrum eval(vec3 wi, vec3 wo);
 
 protected:
     void link_params()
@@ -168,25 +123,6 @@ protected:
         params.add("array", Params::Type::SH, &v3);
     }
 };
-
-// class Microsurface {
-// public:
-//
-//     virtual Float D(const vec3& wh) = 0;
-//     virtual Float pdf(const vec3& wh) = 0;
-//     virtual vec3  sample_D(Sampler& sampler) = 0;
-//
-//     //virtual Float sigma(const vec3& wi) = 0;
-//     /*Float D(const vec3& wh, const vec3& wi) { return 0.; }
-//     vec3 sample_D(Sampler& sampler, const vec3& wi) { return vec3(0.); }
-//     Float pdf(const vec3& wh, const vec3& wi) { return 0.; }
-//
-//     Float G_1(const vec3& wi) { return 0.; }
-//     Float G_1(const vec3& wi, const vec3& wh) { return 0.; }
-//     Float G_2(const vec3& wi, const vec3& wo) { return 0.; }
-//     Float G_2(const vec3& wi, const vec3& wo, const vec3& wh) { return 0.;
-//     }*/
-// };
 
 template <class MICROSURFACE>
 class ShapeInvariantMicrosurface : public Brdf {
@@ -204,53 +140,18 @@ public:
     virtual Float lambda(const vec3& wi, const float& alpha) = 0;
     virtual Float G1(const vec3& wi) = 0;
 
-    Float scale_wi(const vec3& wi) const
-    {
-        Float inv_sin_theta_sqr = 1.0 / (1.0 - wi.z * wi.z);
-        Float cos_phi_sqr = wi.x * wi.x * inv_sin_theta_sqr;
-        Float sin_phi_sqr = wi.y * wi.y * inv_sin_theta_sqr;
-        return std::sqrt(cos_phi_sqr * scale.x * scale.x + sin_phi_sqr * scale.y * scale.y);
-    }
+    Float scale_wi(const vec3& wi) const;
+    vec3 to_transformed_space(const vec3& wi);
+    vec3 to_unit_space(const vec3& wi);
 
-    vec3 to_stretched_space(const vec3& wi) { return glm::normalize(wi * scale); }
+    Float D(const vec3& wh);
+    Float pdf(const vec3& wh);
+    Float pdf(const vec3& wi, const vec3& wo);
 
-    vec3 to_unit_space(const vec3& wi) { return glm::normalize(wi / scale); }
+    vec3 sample_D(Sampler& sampler);
+    vec3 sample(const vec3& wi, Sampler& sampler);
 
-    Float D(const vec3& wh)
-    {
-        Float det_m = 1. / std::abs(scale.x * scale.y);
-        vec3 wu = to_unit_space(wh);
-        return MICROSURFACE::D(wu) * det_m * std::pow(wu.z / wh.z, 4.);
-    }
-
-    Float pdf(const vec3& wh) { return D(wh) * wh.z; }
-
-    vec3 sample_D(Sampler& sampler)
-    {
-        return to_stretched_space(MICROSURFACE::sample_D(sampler));
-    }
-
-    vec3 sample(const vec3& wi, Sampler& sampler)
-    {
-        return glm::reflect(-wi, sample_D(sampler));
-    }
-
-    Float pdf(const vec3& wi, const vec3& wo)
-    {
-        vec3 wh = glm::normalize(wi + wo);
-        return pdf(wh) / (4. * glm::dot(wo, wh));
-    }
-
-    Spectrum eval(vec3 wi, vec3 wo)
-    {
-        vec3 wh = glm::normalize(wi + wo);
-
-        Float d = D(wh);
-        Float g = G1(wi) * G1(wo);
-        Spectrum f = Spectrum(1);
-        Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
-        return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
-    }
+    Spectrum eval(vec3 wi, vec3 wo);
 };
 
 class SphereMicrosurface {
@@ -283,25 +184,9 @@ public:
         link_params();
     }
 
-    Float sigma(const vec3& wi)
-    {
-        Float rough_i = scale_wi(wi);
-        return lambda(wi, rough_i) * wi.z;
-    }
-
-    Float lambda(const vec3& wi, const float& alpha)
-    {
-        Float cos_sqr = wi.z * wi.z;
-        Float tan_sqr = (1. - cos_sqr) / cos_sqr;
-        Float inv_a_sqr = (alpha * alpha * tan_sqr);
-        return (-1. + std::sqrt(1. + inv_a_sqr)) / 2.;
-    }
-
-    Float G1(const vec3& wi)
-    {
-        Float rough_i = scale_wi(wi);
-        return 1. / (1. + lambda(wi, rough_i));
-    }
+    Float sigma(const vec3& wi);
+    Float lambda(const vec3& wi, const float& alpha);
+    Float G1(const vec3& wi);
 
 protected:
     void link_params()
