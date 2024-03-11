@@ -14,8 +14,9 @@
 
 namespace LT_NAMESPACE {
 
-inline bool vis_mis_scn(Scene& scn, Renderer& ren) {
-	return generate_from_json(R"(
+inline bool vis_mis_scn(Scene& scn, Renderer& ren)
+{
+    return generate_from_json(R"(
 	{
 		"integrator": {
 			"type":"DirectIntegrator"
@@ -51,15 +52,15 @@ inline bool vis_mis_scn(Scene& scn, Renderer& ren) {
 		}
 	}
 	)",
-		scn, ren);
+        scn, ren);
 }
 
-
-inline bool prob_scn(Scene& scn, Renderer& ren) {
-	return generate_from_json(R"(
+inline bool prob_scn(Scene& scn, Renderer& ren)
+{
+    return generate_from_json(R"(
 	   	{
 			"integrator": {
-				"type":"DirectIntegrator"
+				"type":"BrdfIntegrator"
 			},
 			"brdf": [
 				{"type":"Diffuse","name":"base","albedo":[0.2,0.2,0.2]},
@@ -95,11 +96,12 @@ inline bool prob_scn(Scene& scn, Renderer& ren) {
 			}
 		}
 		)",
-		scn, ren);
+        scn, ren);
 }
 
-inline bool cornell_box(Scene& scn, Renderer& ren) {
-	return generate_from_json(R"(
+inline bool cornell_box(Scene& scn, Renderer& ren)
+{
+    return generate_from_json(R"(
 	    	{
 	 		"integrator": {
 	 			"type":"PathIntegrator"
@@ -128,11 +130,12 @@ inline bool cornell_box(Scene& scn, Renderer& ren) {
 	 		}
 	 	}
 	 	)",
-		scn, ren);
+        scn, ren);
 }
 
-inline bool dir_light(Scene& scn, Renderer& ren) {
-	return generate_from_json(R"(
+inline bool dir_light(Scene& scn, Renderer& ren)
+{
+    return generate_from_json(R"(
 	   	{
 			"integrator": {
 				"type":"DirectIntegrator"
@@ -159,7 +162,7 @@ inline bool dir_light(Scene& scn, Renderer& ren) {
 			}
 		}
 		)",
-		scn, ren);
+        scn, ren);
 }
 
-}
+} // namespace LT_NAMESPACE

@@ -1,16 +1,16 @@
 #pragma once
 #include <lt/lt_common.h>
-#include <lt/texture.h>
 #include <lt/sensor.h>
-
+#include <lt/texture.h>
 #include <tiny_exr/tinyexr.h>
-
 
 namespace LT_NAMESPACE {
 
-static int save_sensor_exr(const Sensor& sen, const std::string& filename) {
+static int save_sensor_exr(const Sensor& sen, const std::string& filename)
+{
     const char* err;
-    int ret = SaveEXR((float*)sen.value.data(), sen.w, sen.h, 3, 0, filename.c_str(), &err);
+    int ret = SaveEXR((float*)sen.value.data(), sen.w, sen.h, 3, 0,
+        filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         fprintf(stderr, "Save EXR err: %s\n", err);
         return ret;
@@ -20,19 +20,18 @@ static int save_sensor_exr(const Sensor& sen, const std::string& filename) {
     return 0;
 };
 
-
-
-static int load_texture_exr(const std::string& filename, Texture<Spectrum>& t) {
+static int load_texture_exr(const std::string& filename, Texture<Spectrum>& t)
+{
     float* out;
     int width;
     int height;
-	const char* err;
+    const char* err;
     int ret = LoadEXR(&out, &width, &height, filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
         fprintf(stderr, "Load EXR err: %s\n", err);
         return ret;
     }
-    
+
     t.w = (size_t)width;
     t.h = (size_t)height;
     t.initialize();
@@ -49,6 +48,4 @@ static int load_texture_exr(const std::string& filename, Texture<Spectrum>& t) {
     return TINYEXR_SUCCESS;
 };
 
-
-
-}  // namespace LT_NAMESPACE
+} // namespace LT_NAMESPACE

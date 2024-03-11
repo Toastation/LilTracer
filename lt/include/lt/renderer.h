@@ -8,8 +8,9 @@
 #include <lt/integrator.h>
 #include <lt/lt_common.h>
 #include <lt/sampler.h>
-#include <lt/sensor.h>
 #include <lt/scene.h>
+#include <lt/sensor.h>
+
 #include <thread>
 
 namespace LT_NAMESPACE {
@@ -18,20 +19,18 @@ namespace LT_NAMESPACE {
  * @brief Class for managing rendering process.
  */
 class Renderer {
- public:
-  std::shared_ptr<Sampler> sampler;       /**< Pointer to the sampler. */
-  std::shared_ptr<Sensor> sensor;         /**< Pointer to the sensor. */
-  std::shared_ptr<Camera> camera;         /**< Pointer to the camera. */
-  std::shared_ptr<Integrator> integrator; /**< Pointer to the integrator. */
+public:
+    std::shared_ptr<Sampler> sampler; /**< Pointer to the sampler. */
+    std::shared_ptr<Sensor> sensor; /**< Pointer to the sensor. */
+    std::shared_ptr<Camera> camera; /**< Pointer to the camera. */
+    std::shared_ptr<Integrator> integrator; /**< Pointer to the integrator. */
 
-  float render(Scene& scene) {
-	  return integrator->render(camera, sensor, scene, *sampler);
-  }
+    float render(Scene& scene)
+    {
+        return integrator->render(camera, sensor, scene, *sampler);
+    }
 
-  void reset() {
-	  sensor->reset();
-  }
-
+    void reset() { sensor->reset(); }
 };
 
 /**
@@ -39,41 +38,42 @@ class Renderer {
  */
 class RendererAsync : public Renderer {
 public:
-	std::thread thr;
-	bool need_reset;
+    std::thread thr;
+    bool need_reset;
 
-	RendererAsync(){
-		need_reset = false;
-	}
+    RendererAsync() { need_reset = false; }
 
-	~RendererAsync() {
-		try {
-			if (thr.joinable()) {
-				thr.join();
-			}
-		}
-		catch (std::exception& ex) {
-			std::cerr << ex.what()  << std::endl;
-		}
-	}
+    ~RendererAsync()
+    {
+        try {
+            if (thr.joinable()) {
+                thr.join();
+            }
+        } catch (std::exception& ex) {
+            std::cerr << ex.what() << std::endl;
+        }
+    }
 
-	void reset() {
-		need_reset = true;
-	}
+    void reset() { need_reset = true; }
 
-	bool render(Scene& scene) {
-		if (thr.joinable()) {
-			return false;
-		}
-		else {
-			if (need_reset) {
-				Renderer::reset();
-				need_reset = false;
-			}
-			thr = std::thread([&](auto s) { Renderer::render(s); thr.detach(); }, scene);
-			return true;
-		}
-	}
+    bool render(Scene& scene)
+    {
+        if (thr.joinable()) {
+            return false;
+        } else {
+            if (need_reset) {
+                Renderer::reset();
+                need_reset = false;
+            }
+            thr = std::thread(
+                [&](auto s) {
+                    Renderer::render(s);
+                    thr.detach();
+                },
+                scene);
+            return true;
+        }
+    }
 };
 
-}  // namespace LT_NAMESPACE
+} // namespace LT_NAMESPACE
