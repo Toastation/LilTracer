@@ -167,12 +167,28 @@ class Integrator : public Serializable {
   Spectrum estimate_direct(Ray &r, SurfaceInteraction &si,
                            const std::shared_ptr<Light> &light, Scene &scene,
                            Sampler &sampler) {
-    vec3 l = light->sample_light_direction(sampler);
-    vec3 wo = si.to_local(-l);
+    vec3 light_direction;
+    vec3 light_emission;
+    Float light_pdf;
+    light->sample(si, light_direction, light_emission, light_pdf, sampler);
+
+
+    vec3 wo = si.to_local(-light_direction);
     vec3 wi = si.to_local(-r.d);
 
-    Ray rs(si.pos - r.d * 0.0001f, -l);
-    if (!scene.intersect(rs)) return si.brdf->eval(wi, wo) * light->eval(l) / light->pdf(l);
+    Ray rs(si.pos - r.d * 0.0001f, -light_direction);
+    
+    std::shared_ptr<Geometry> geom = scene.intersect(rs);
+    
+    if (geom) {
+        if (light->has_geometry() && (light->geometry_id() == geom->rtc_id)) {
+            return si.brdf->eval(wi, wo) * light_emission / light_pdf;
+        }
+    }
+    else {
+        return si.brdf->eval(wi, wo) * light_emission / light_pdf;
+    }
+
     return Spectrum(0.);
   }
 
@@ -180,9 +196,7 @@ class Integrator : public Serializable {
 };
 
 
-/**
- * @brief Direct lighting integrator class.
- */
+
 class BrdfIntegrator : public Integrator {
 public:
     BrdfIntegrator() : Integrator("BrdfIntegrator") { link_params(); };
@@ -200,7 +214,7 @@ public:
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
-            if (depth > 10 || si.brdf->emissive())
+            if (depth > 0 || si.brdf->emissive())
                 return si.brdf->emission();
 
             // Compute BRDF  contrib
@@ -251,6 +265,9 @@ class DirectIntegrator : public Integrator {
         r = Ray(si.pos + r.d * 0.00001f, r.d);
         return render_pixel(r, scene, sampler);
       }
+
+      if (si.brdf->emissive())
+          return si.brdf->emission();
 
       s += uniform_sample_one_light(r, si, scene, sampler);
     }

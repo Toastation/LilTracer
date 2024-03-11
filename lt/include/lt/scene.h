@@ -61,7 +61,7 @@ class Scene {
    * @param r The ray to check for intersection.
    * @return True if the ray intersects with the scene, false otherwise.
    */
-  bool intersect(const Ray &r) {
+  /*bool intersect(const Ray &r) {
     RTCRay ray;
     ray.org_x = r.o.x;
     ray.org_y = r.o.y;
@@ -80,6 +80,27 @@ class Scene {
     }
 
     return false;
+  }*/
+
+  std::shared_ptr<Geometry> intersect(const Ray& r) {
+      RTCRayHit rayhit;
+      rayhit.ray.org_x = r.o.x;
+      rayhit.ray.org_y = r.o.y;
+      rayhit.ray.org_z = r.o.z;
+      rayhit.ray.dir_x = r.d.x;
+      rayhit.ray.dir_y = r.d.y;
+      rayhit.ray.dir_z = r.d.z;
+      rayhit.ray.tnear = 0.f;
+      rayhit.ray.tfar = std::numeric_limits<float>::infinity();
+      rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+
+      rtcIntersect1(scene, &context, &rayhit);
+
+      if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+          return geometries[rayhit.hit.geomID];
+      }
+
+      return nullptr;
   }
 
   /**
@@ -93,6 +114,7 @@ class Scene {
       geometries[i]->init_rtc(device);
       rtcCommitGeometry(geometries[i]->rtc_geom);
       unsigned int geomID = rtcAttachGeometry(scene, geometries[i]->rtc_geom);
+      geometries[i]->rtc_id = geomID;
       rtcReleaseGeometry(geometries[i]->rtc_geom);
     }
 

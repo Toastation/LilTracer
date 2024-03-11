@@ -42,6 +42,7 @@ class Geometry : public Serializable {
       brdf; /**< Pointer to the BRDF associated with the geometry. */
 
   RTCGeometry rtc_geom; /**< Embree RTC geometry. */
+  int rtc_id;
 };
 
 /**

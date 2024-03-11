@@ -251,6 +251,13 @@ static bool generate_from_json(const std::string& str, Scene& scn, Renderer& ren
             set_params(json_geometry, geometry->params, brdf_ref);
             geometry->init();
 
+            if (geometry->brdf->emissive() && geometry->type == "Sphere") {
+                std::shared_ptr<SphereLight> sphere_light = std::make_shared<SphereLight>();
+                sphere_light->sphere = std::dynamic_pointer_cast<Sphere>(geometry);
+                sphere_light->init();
+                scn.lights.push_back(sphere_light);
+            }
+
             // Add the geometry to the scene
             scn.geometries.push_back(geometry);
 

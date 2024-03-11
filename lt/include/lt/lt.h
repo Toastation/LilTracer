@@ -18,7 +18,7 @@ inline bool vis_mis_scn(Scene& scn, Renderer& ren) {
 	return generate_from_json(R"(
 	{
 		"integrator": {
-			"type":"BrdfIntegrator"
+			"type":"DirectIntegrator"
 		},
 		"brdf": [
 			{"type":"GGXMicrosurface","name":"plane1","roughx":0.5,"roughy":0.5},
@@ -26,11 +26,7 @@ inline bool vis_mis_scn(Scene& scn, Renderer& ren) {
 			{"type":"GGXMicrosurface","name":"plane3","roughx":0.01,"roughy":0.01},
 			{"type":"GGXMicrosurface","name":"plane4","roughx":0.001,"roughy":0.001},
 			{"type":"Diffuse","name":"floor","albedo":[0.3,0.3,0.3]},
-			{"type":"Emissive","name":"sphere_brdf","intensitity":[100.0,100.0,100.0]}
-		],
-		"light": [
-			{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [0.0, -1.0, 1.0] },
-			{"type":"DirectionnalLight", "intensity" : 1.0, "dir" : [1.0, -1.0, 1.0] }
+			{"type":"Emissive","name":"sphere_brdf","intensity":[100.0,100.0,100.0]}
 		],
 		"geometries": [
 			{"type":"Mesh","brdf":"plane1", "filename" : "../../../data/vis_mis/plane1.obj"},

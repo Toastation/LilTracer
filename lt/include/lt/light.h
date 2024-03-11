@@ -10,6 +10,7 @@
 #include <lt/serialize.h>
 #include <lt/texture.h>
 #include <lt/io_exr.h>
+#include <lt/geometry.h>
 
 namespace LT_NAMESPACE {
 
@@ -26,13 +27,13 @@ class Light : public Serializable {
 
   /**
    * @brief Pure virtual function for sampling light direction.
-   * @return The sampled light direction.
    */
-  virtual vec3 sample_light_direction(Sampler& sampler) = 0;
+  virtual void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler) = 0;
 
   virtual Spectrum eval(const vec3& direction) = 0;
 
-  virtual Float pdf(const vec3& direction) = 0;
+  virtual bool has_geometry() { return false; }
+  virtual int geometry_id() { return -1; }
 };
 
 /**
@@ -50,10 +51,15 @@ class DirectionnalLight : public Light {
    * @brief Sample the direction of the light.
    * @return The direction of the light.
    */
-  vec3 sample_light_direction(Sampler& sampler) { return dir; }
+  void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler) {
+      direction = dir;
+      emission = Spectrum(intensity);
+      pdf = 1;
+  }
 
-  Spectrum eval(const vec3& direction) { return Spectrum(intensity); }
-  Float pdf(const vec3& direction) { return 1.; }
+  Spectrum eval(const vec3& direction) {
+      return Spectrum(intensity);
+  }
 
   /**
    * @brief Initialize the directional light.
@@ -85,9 +91,11 @@ public:
         link_params();
     }
 
-    vec3 sample_light_direction(Sampler& sampler) {
+    void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler) {
+
 #if 0
-        return square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
+        direction = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
+        pdf = square_to_uniform_sphere_pdf();
 #endif // 0
 #if 1
         Float u = sampler.next_float();
@@ -105,8 +113,10 @@ public:
         phi += dphi * (sampler.next_float() - 0.5);
 
 
-        return vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+        direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+        pdf = density.eval(x, y);
 #endif
+        emission = eval(direction);
     }
     
     Spectrum eval(const vec3& direction) {
@@ -115,16 +125,6 @@ public:
         return envmap.eval(u, v) * intensity;
     }
 
-    Float pdf(const vec3& direction) {
-#if 0
-        return square_to_uniform_sphere_pdf();
-#endif
-#if 1
-        Float u = (glm::atan(direction.z, direction.x) + pi) / (2 * pi);
-        Float v = glm::acos(direction.y) / pi;
-        return density.eval(u, v);
-#endif
-    }
     
     void compute_density() {
 
@@ -186,5 +186,78 @@ protected:
         params.add("intensity", Params::Type::FLOAT, &intensity);
     }
 };
+
+
+
+class SphereLight : public Light {
+public:
+
+    SphereLight() : Light("SphereLight") { link_params(); }
+
+
+    glm::mat3 build_from_w(const vec3& w) {
+        vec3 unit_w = glm::normalize(w);
+        vec3 a = (std::abs(unit_w.x) > 0.9) ? vec3(0, 1, 0) : vec3(1, 0, 0);
+        vec3 v = glm::normalize(glm::cross(unit_w, a));
+        vec3 u = glm::normalize(glm::cross(unit_w, v));
+        return (glm::mat3(u, v, unit_w));
+    }
+
+    void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler) {
+        
+#if 1
+        vec3 point = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
+        vec3 point_on_surface = point * sphere->rad + sphere->pos;
+        
+        direction = si.pos - point_on_surface;
+        Float distance = glm::length(direction);
+        direction /= distance;
+        
+        Float light_cosine = glm::dot(si.nor, -direction);
+        Float light_area = 4. * pi * sphere->rad * sphere->rad;
+        pdf = distance * distance / (light_area * light_cosine);
+#endif
+
+#if 0
+        direction = sphere->pos - si.pos;
+        Float distance = glm::length(direction);
+        direction /= distance;
+
+        Float cos_theta_max = std::sqrt(1. - sphere->rad * sphere->rad / (distance * distance));
+        Float solid_angle = 2. * pi * (1 - cos_theta_max);
+        pdf = 1. / solid_angle;
+
+
+        // random to sphere 
+        Float z = 1 + sampler.next_float() * (cos_theta_max - 1);
+
+        auto phi = 2 * pi * sampler.next_float();
+        auto x = cos(phi) * sqrt(1 - z * z);
+        auto y = sin(phi) * sqrt(1 - z * z);
+        vec3 local = vec3(x, y, z);
+
+        glm::mat3 uvw = build_from_w(direction);
+        direction = -glm::normalize(uvw * local);
+#endif
+
+        emission = sphere->brdf->emission();
+    }
+
+    Spectrum eval(const vec3& direction) {
+        return sphere->brdf->emission();
+    }
+
+    std::shared_ptr<Sphere> sphere;
+
+    bool has_geometry() { return true; }
+    int geometry_id() { return sphere->rtc_id; }
+    
+protected:
+    /**
+     * @brief All param are from Sphere and Sphere::brdf.
+     */
+    void link_params() {}
+};
+
 
 }  // namespace LT_NAMESPACE
