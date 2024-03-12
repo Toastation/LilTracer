@@ -10,9 +10,10 @@ int main(int argc, char* argv[])
         lt::Renderer ren;
         lt::Scene scn;
 
-        lt::vis_mis_scn(scn, ren);
+        //lt::vis_mis_scn(scn, ren);
+        lt::cornell_box(scn, ren);
 
-        for (int s = 0; s < 10; s++) {
+        for (int s = 0; s < 1000; s++) {
             std::cout << ren.render(scn) << std::endl;
         }
 

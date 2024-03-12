@@ -59,20 +59,26 @@ void EnvironmentLight::sample(const SurfaceInteraction& si, vec3& direction, vec
     int x = id % envmap.w;
 
     Float theta = pi * ((Float)y + 0.5) / (Float)envmap.h;
-    Float phi = pi + 2. * pi * ((Float)x + 0.5) / (Float)envmap.w;
-
+    Float phi = 2. * pi * ((Float)x + 0.5) / (Float)envmap.w;
+    
+    Float solid_angle = sin(theta) * dphi * dtheta;
+    
+    pdf = density.get(x, y);
+    
     theta += dtheta * (sampler.next_float() - 0.5);
     phi += dphi * (sampler.next_float() - 0.5);
 
-    pdf = density.get(x, y);
     direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 #endif
-    emission = eval(direction);
+    emission = eval(direction) * solid_angle;
 }
 
 Spectrum EnvironmentLight::eval(const vec3& direction)
 {
-    Float u = (glm::atan(direction.z, direction.x) + pi) / (2 * pi);
+    Float phi = glm::atan(direction.z, direction.x);
+    phi += pi;
+    //phi = (phi < 0. ? 2 * pi + phi : phi);
+    Float u = phi / (2 * pi);
     Float v = glm::acos(direction.y) / pi;
     return envmap.eval(u, v) * intensity;
 }
