@@ -60,7 +60,7 @@ inline bool prob_scn(Scene& scn, Renderer& ren)
     return generate_from_json(R"(
 	   	{
 			"integrator": {
-				"type":"BrdfIntegrator"
+				"type":"DirectIntegrator"
 			},
 			"brdf": [
 				{"type":"Diffuse","name":"base","albedo":[0.2,0.2,0.2]},

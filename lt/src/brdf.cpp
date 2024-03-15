@@ -94,7 +94,7 @@ Float GGXMicrosurface::sigma(const vec3& wi)
 
 Float GGXMicrosurface::lambda(const vec3& wi, const float& alpha)
 {
-    Float cos_sqr = wi.z * wi.z;
+    Float cos_sqr = glm::clamp(wi.z * wi.z,0.0001f,0.9999f);
     Float tan_sqr = (1. - cos_sqr) / cos_sqr;
     Float inv_a_sqr = (alpha * alpha * tan_sqr);
     return (-1. + std::sqrt(1. + inv_a_sqr)) / 2.;

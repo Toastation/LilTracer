@@ -31,9 +31,10 @@ inline std::vector<T> linspace(T start, T end, size_t size)
     if (size == 1)
         return { start };
 
-    T delta = (end - start) / (size - 1);
+    //T delta = (end - start) / (size - 1);
+    T delta = (end - start) / size;
     for (size_t i = 0; i < size; i++)
-        arr[i] = start + delta * i;
+        arr[i] = start + delta * i + delta * 0.5;
 
     return arr;
 }

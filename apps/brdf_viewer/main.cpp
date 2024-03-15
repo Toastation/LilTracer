@@ -77,6 +77,14 @@ struct AppData {
     lt::Scene    scn_glo_ill;
     lt::RendererAsync ren_glo_ill;
     RenderSensor rsen_glo_ill;
+
+    std::shared_ptr<lt::HemisphereSensor> s_brdf_sampling;
+    RenderSensor rs_brdf_sampling;
+    std::shared_ptr<lt::Sensor> s_brdf_sampling_pdf;
+    RenderSensor rs_brdf_sampling_pdf;
+
+    lt::Sampler sampler;
+
 };
 
 void AppInit(AppData& app_data) {
@@ -99,6 +107,16 @@ void AppInit(AppData& app_data) {
     app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
+
+    app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(256, 64);
+    app_data.rs_brdf_sampling.sensor = app_data.s_brdf_sampling;
+    app_data.rs_brdf_sampling.initialize();
+
+    app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(256, 64);
+    app_data.rs_brdf_sampling_pdf.sensor = app_data.s_brdf_sampling_pdf;
+    app_data.rs_brdf_sampling_pdf.initialize();
+
+
 }
 
 
@@ -160,6 +178,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     if (need_reset) {
         app_data.ren_glo_ill.reset();
         app_data.ren_dir_light.reset();
+        app_data.s_brdf_sampling->reset();
         need_reset = false;
     }
 
@@ -400,6 +419,44 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 }
                 if (ImGui::BeginTabItem("Sampling"))
                 {
+                    lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
+
+                                        
+                    std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, app_data.s_brdf_sampling->h);
+                    std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, app_data.s_brdf_sampling->w);
+
+                    for (int i = 0; i < 10000; i++) {
+                        lt::vec3 wo = app_data.brdfs[app_data.current_brdf_idx]->sample(wi, app_data.sampler);
+                        float phi = std::atan2(wo.y, wo.x);
+                        phi = phi < 0 ? 2 * lt::pi + phi : phi;
+                        float x = phi / (2. * lt::pi) * (float)app_data.s_brdf_sampling->w;
+                        float y = std::acos(wo.z) / (0.5 * lt::pi) * (float)app_data.s_brdf_sampling->h;
+                        if( y < app_data.s_brdf_sampling->h )
+                            app_data.s_brdf_sampling->add(int(x),int(y),lt::Spectrum(1));
+                    }
+                    
+
+                    for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
+                        for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
+                            lt::vec3 wo = lt::polar_to_card(th[y], ph[x]);
+                            app_data.s_brdf_sampling_pdf->set(x,y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
+;
+                        }
+                    }
+
+                    app_data.rs_brdf_sampling.update_data();
+                    app_data.rs_brdf_sampling_pdf.update_data();
+
+                    if (ImPlot::BeginPlot("##sample", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling.sensor->w, app_data.rs_brdf_sampling.sensor->h));
+                        ImPlot::EndPlot();
+                    }
+
+                    if (ImPlot::BeginPlot("##sample_pdf", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_pdf.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_pdf.sensor->w, app_data.rs_brdf_sampling_pdf.sensor->h));
+                        ImPlot::EndPlot();
+                    }
+
                     ImGui::EndTabItem();
                 }
 

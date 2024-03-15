@@ -22,14 +22,16 @@ public:
      */
     Sensor()
         : w(0)
-        , h(0) {};
+        , h(0) {
+        sum_counts = 0;
+    };
 
     /**
      * @brief Parameterized constructor.
      * @param w Width of the sensor.
      * @param h Height of the sensor.
      */
-    Sensor(uint32_t w, uint32_t h)
+    Sensor(const uint32_t& w, const uint32_t& h)
         : w(w)
         , h(h)
     {
@@ -38,6 +40,7 @@ public:
         count.resize(w * h);
         u = linspace<Float>(-1, 1, w);
         v = linspace<Float>(1, -1, h);
+        sum_counts = 0;
     }
 
     /**
@@ -51,6 +54,7 @@ public:
         memset(acculumator.data(), 0, sizeof(Spectrum) * acculumator.size());
         memset(value.data(), 0, sizeof(Spectrum) * value.size());
         memset(count.data(), 0, sizeof(uint16_t) * count.size());
+        sum_counts = 0;
     }
 
     /**
@@ -65,13 +69,8 @@ public:
         uint32_t idx = y * w + x;
         acculumator[idx] += s;
         count[idx]++;
-
-        // Tonemapping
-        Spectrum v = acculumator[idx] / Spectrum(count[idx]);
-        //value[idx] = v / (Spectrum(1.) + v);
-        value[idx] = v;
-        //  Gamma correction
-        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+        sum_counts++;
+        set_value(idx,y);
     }
 
     /**
@@ -86,12 +85,11 @@ public:
         uint32_t idx = y * w + x;
         acculumator[idx] = s;
         count[idx] = 1;
+        set_value(idx,y);
+    }
 
-        // Tonemapping
-        //value[idx] = s / (Spectrum(1.) + s);
-        value[idx] = s;
-        //  Gamma correction
-        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+    Spectrum get(const uint32_t& x, const uint32_t& y) {
+        return value[y * w + x];
     }
 
     /**
@@ -106,17 +104,55 @@ public:
         return count[y * w + x];
     }
 
+    virtual void set_value(const uint32_t& idx, const uint32_t& x){
+        value[idx] = acculumator[idx] / (Float)count[idx];
+        //  Gamma correction
+        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+    }
+
     uint32_t w; /**< Width of the sensor. */
     uint32_t h; /**< Height of the sensor. */
-    std::vector<Spectrum>
-        acculumator; /**< Accumulator array for sensor samples. */
+    std::vector<Spectrum> acculumator; /**< Accumulator array for sensor samples. */
     std::vector<Spectrum> value; /**< Value array for sensor samples. */
-    std::vector<uint16_t>
-        count; /**< Count array for the number of samples at each pixel. */
-    std::vector<Float>
-        u; /**< Vector representing the u-coordinates of the sensor pixels. */
-    std::vector<Float>
-        v; /**< Vector representing the v-coordinates of the sensor pixels. */
+    std::vector<uint16_t> count; /**< Count array for the number of samples at each pixel. */
+    std::atomic<uint32_t> sum_counts;
+    std::vector<Float> u; /**< Vector representing the u-coordinates of the sensor pixels. */
+    std::vector<Float> v; /**< Vector representing the v-coordinates of the sensor pixels. */
 };
+
+
+class HemisphereSensor : public Sensor
+{
+public:
+
+    HemisphereSensor() : Sensor() {
+        dtheta = -1.;
+        dphi = -1.;
+    };
+    HemisphereSensor(const uint32_t& w, const uint32_t& h) : Sensor(w, h) {
+        dtheta = 0.5 * pi / Float(h);
+        dphi = 2 * pi / Float(w);
+
+        std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, h);
+        
+        solid_angle.resize(h);
+        for (int i = 0; i < h; i++)
+            solid_angle[i] = std::sin(th[i]) * dtheta * dphi;
+
+    };
+
+    void set_value(const uint32_t& idx, const uint32_t& y) {
+        Float norm = sum_counts * solid_angle[y];
+        value[idx] = acculumator[idx] / norm;
+        //  Gamma correction
+        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+    }
+
+    std::vector<Float> solid_angle; /**< Vector representing the u-coordinates of the sensor pixels. */
+    Float dtheta;
+    Float dphi;
+
+};
+
 
 } // namespace LT_NAMESPACE
