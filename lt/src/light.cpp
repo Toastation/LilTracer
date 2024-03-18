@@ -29,7 +29,34 @@ void DirectionnalLight::sample(const SurfaceInteraction& si, vec3& direction, ve
 
 Spectrum DirectionnalLight::eval(const vec3& direction) { return Spectrum(intensity); }
 
+int EnvironmentLight::binary_search(const float& u) {
 
+    int left = 0;
+    int right = c.size() - 1;
+    int i = 1000;
+    while ((left <= right) && (i > 0))
+    {
+        int mid = left + (right - left) / 2;
+
+        if (c[mid] <= u) {
+            if (c[mid + 1] >= u)
+            {
+                return mid;
+            }
+            else
+            {
+                left = mid + 1;
+            }
+        }
+        else
+        {
+            right = mid - 1;
+        }
+
+    }
+    return -1;
+
+}
 
 void EnvironmentLight::init()
 {
@@ -40,6 +67,7 @@ void EnvironmentLight::init()
     c = std::vector<float>(
         cumulative_density.data,
         cumulative_density.data + cumulative_density.w * cumulative_density.h);
+    c.insert(c.begin(), 0.);
 }
 
 void EnvironmentLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
@@ -52,7 +80,13 @@ void EnvironmentLight::sample(const SurfaceInteraction& si, vec3& direction, vec
 #if 1
     Float u = sampler.next_float();
 
-    int id = std::distance(c.begin(), std::lower_bound(c.begin(), c.end(), u));
+    // Binary search
+    //int id = std::distance(c.begin(), std::lower_bound(c.begin(), c.end(), u));
+    //std::vector<float>::iterator begin = c.begin();
+    //int id = std::lower_bound(begin, c.end(), u) - begin;
+    // Binary search
+    int id = binary_search(u);
+    
 
     int y = id / envmap.w;
     y = envmap.h - y - 1;

@@ -60,15 +60,19 @@ public:
 #endif
 #if 1
         int block_size = 16;
+        //std::cout << "in" << std::endl;
 #pragma omp parallel for collapse(2) schedule(dynamic)
         for (int h = 0; h < sensor->h / block_size + 1; h++)
             for (int w = 0; w < sensor->w / block_size + 1; w++) {
                 Sampler s;
+                //s.seed(n_sample);
                 s.seed((h + w * (block_size + 1) + 1) * n_sample);
-                render_block(h, w, block_size, camera, sensor, scene, s);
+                render_block(h, w, block_size, camera, sensor, scene, sampler);
             }
 
 #endif
+        //std::cout << "out" << std::endl;
+
 #if 0
 			int block_size = 16;
 			int h_num_block = sensor->h / block_size + 1;
@@ -301,7 +305,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , depth(32)
+        , depth(1)
     {
         link_params();
     };

@@ -119,6 +119,9 @@ protected:
         params.add("texture", Params::Type::TEXTURE, &envmap);
         params.add("intensity", Params::Type::FLOAT, &intensity);
     }
+
+private:
+    int binary_search(const float& u);
 };
 
 class SphereLight : public Light {
