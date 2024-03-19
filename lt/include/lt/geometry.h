@@ -23,7 +23,13 @@ public:
      * @param type The type of geometry.
      */
     Geometry(const std::string& type)
-        : Serializable(type) {};
+        : Serializable(type) 
+    {
+        local_to_world = glm::mat4(1.);
+        local_to_world[0][0] = 2;
+        local_to_world[1][1] = 2;
+        local_to_world[2][2] = 2;
+    };
 
     /**
      * @brief Pure virtual function for computing the normal at a hit position.
@@ -44,6 +50,7 @@ public:
 
     RTCGeometry rtc_geom; /**< Embree RTC geometry. */
     int rtc_id;
+    glm::mat4 local_to_world;
 };
 
 /**
@@ -162,6 +169,7 @@ protected:
     {
         params.add("filename", Params::Type::PATH, &filename);
         params.add("brdf", Params::Type::BRDF, &brdf);
+        params.add("local_to_world", Params::Type::MAT4, &local_to_world);
     }
 };
 
@@ -231,6 +239,7 @@ protected:
         params.add("pos", Params::Type::VEC3, &pos);
         params.add("rad", Params::Type::FLOAT, &rad);
         params.add("brdf", Params::Type::BRDF, &brdf);
+        params.add("local_to_world", Params::Type::MAT4, &local_to_world);
     }
 };
 

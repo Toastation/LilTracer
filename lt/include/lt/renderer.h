@@ -24,6 +24,9 @@ public:
     std::shared_ptr<Sensor> sensor; /**< Pointer to the sensor. */
     std::shared_ptr<Camera> camera; /**< Pointer to the camera. */
     std::shared_ptr<Integrator> integrator; /**< Pointer to the integrator. */
+    int max_sample;
+
+    Renderer() : max_sample(1) {}
 
     float render(Scene& scene)
     {

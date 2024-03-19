@@ -1,7 +1,9 @@
 {
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "BrdfIntegrator",
+    "max_depth": 100
   },
+  "max_sample" :  3,
   "brdf": [
     {
       "type": "Diffuse",
@@ -14,18 +16,6 @@
     "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
     "intensity": 1.0
   },
-  "nlight": [
-    {
-      "type": "DirectionnalLight",
-      "intensity": 1.0,
-      "dir": [ -0.0, -1.0, -1.0 ]
-    },
-    {
-      "type": "DirectionnalLight",
-      "intensity": 1.0,
-      "dir": [ -1.0, -1.0, -1.0 ]
-    }
-  ],
   "geometries": [
     {
       "type": "Mesh",

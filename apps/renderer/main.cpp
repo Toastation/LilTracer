@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 
         lt::generate_from_path(argv[a], scn, ren);
 
-        for (int s = 0; s < 1000; s++) {
+        for (int s = 0; s < ren.max_sample;  s++) {
             std::cout << ren.render(scn) << std::endl;
         }
 

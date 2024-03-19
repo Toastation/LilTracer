@@ -115,6 +115,7 @@ public:
 
         for (int i = 0; i < geometries.size(); i++) {
             geometries[i]->init_rtc(device);
+            rtcGetGeometryTransform(geometries[i]->rtc_geom, 0, RTC_FORMAT_FLOAT4X4_ROW_MAJOR, (float*)(&geometries[i]->local_to_world[0]) );
             rtcCommitGeometry(geometries[i]->rtc_geom);
             unsigned int geomID = rtcAttachGeometry(scene, geometries[i]->rtc_geom);
             geometries[i]->rtc_id = geomID;

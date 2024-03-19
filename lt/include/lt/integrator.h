@@ -210,7 +210,8 @@ public:
 class BrdfIntegrator : public Integrator {
 public:
     BrdfIntegrator()
-        : Integrator("BrdfIntegrator")
+        : Integrator("BrdfIntegrator"),
+        max_depth(10)
     {
         link_params();
     };
@@ -229,7 +230,7 @@ public:
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
-            if (depth > 0 || si.brdf->emissive())
+            if (depth >= max_depth || si.brdf->emissive())
                 return si.brdf->emission();
 
             // Compute BRDF  contrib
@@ -255,8 +256,16 @@ public:
         return render_pixel_rec(r, scene, sampler, 0);
     }
 
+    void init() {
+        std::cout << "max_depth" << max_depth << std::endl;
+    }
+
+    int max_depth;
+
 protected:
-    void link_params() { }
+    void link_params() { 
+        params.add("max_depth", lt::Params::Type::INT, &max_depth);
+    }
 };
 
 /**

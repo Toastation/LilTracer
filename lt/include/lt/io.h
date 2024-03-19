@@ -27,6 +27,14 @@ using json = nlohmann::json;
 static void json_set_float(const json& j, float* ptr) { *ptr = j; }
 
 /**
+ * @brief Set a int value from JSON.
+ * @param j The JSON value.
+ * @param ptr Pointer to the float variable.
+ */
+static void json_set_int(const json& j, int* ptr) { *ptr = j; }
+
+
+/**
  * @brief Set a vec3 value from JSON.
  * @param j The JSON value.
  * @param ptr Pointer to the vec3 variable.
@@ -84,6 +92,9 @@ static void set_params(const json& j, const Params& params, const std::string& d
             case Params::Type::FLOAT:
                 json_set_float(j[params.names[i]], (float*)params.ptrs[i]);
                 break;
+            case Params::Type::INT:
+                json_set_int(j[params.names[i]], (int*)params.ptrs[i]);
+                break;
             case Params::Type::VEC3:
                 json_set_vec3(j[params.names[i]], (vec3*)params.ptrs[i]);
                 break;
@@ -136,6 +147,11 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
 
     // Initialize sampler in the renderer
     ren.sampler = std::make_shared<Sampler>();
+
+    // Parse max sample
+    if (json_scn.contains("max_sample")) {
+        ren.max_sample = (int)json_scn["max_sample"];
+    }
 
     // Parse Integrator
     if (json_scn.contains("integrator")) {

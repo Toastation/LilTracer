@@ -17,7 +17,9 @@ struct Params {
      */
     enum class Type {
         FLOAT, /**< Float type parameter. */
+        INT, /**< Int type parameter. */
         VEC3, /**< Vector3 type parameter. */
+        MAT4, /**< Matrix 4x4 type parameter . */
         SH, /**< Spherical Harmonics type parameter. */
         PATH, /**< Path type parameter. */
         BRDF, /**< BRDF type parameter. */
