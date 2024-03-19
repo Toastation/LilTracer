@@ -256,10 +256,6 @@ public:
         return render_pixel_rec(r, scene, sampler, 0);
     }
 
-    void init() {
-        std::cout << "max_depth" << max_depth << std::endl;
-    }
-
     int max_depth;
 
 protected:
