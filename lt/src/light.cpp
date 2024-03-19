@@ -167,7 +167,7 @@ glm::mat3 SphereLight::build_from_w(const vec3& w)
 void SphereLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
     Float& pdf, Sampler& sampler)
 {
-#if 1
+#if 0
     vec3 point = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
     vec3 point_on_surface = point * sphere->rad + sphere->pos;
 
@@ -180,7 +180,7 @@ void SphereLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& em
     pdf = distance * distance / (light_area * light_cosine);
 #endif
 
-#if 0
+#if 1
     direction = sphere->pos - si.pos;
     Float distance = glm::length(direction);
     direction /= distance;

@@ -77,7 +77,7 @@ void AppInit(AppData& app_data) {
     need_reset = false;
 
     app_data.envmap = std::make_shared<lt::EnvironmentLight>();
-    lt::load_texture_exr("small_empty_room_3_1k.exr", app_data.envmap->envmap);
+    lt::load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", app_data.envmap->envmap);
     app_data.envmap->init();
     app_data.rt.texture = &app_data.envmap->envmap;
     app_data.rt.initialize();
@@ -92,7 +92,9 @@ void AppInit(AppData& app_data) {
         lt::vec3 emission;
         Float pdf;
         app_data.envmap->sample(lt::SurfaceInteraction(), app_data.samples[i], emission, pdf, app_data.sampler);
-        app_data.x[i] = (std::atan2(app_data.samples[i].z, app_data.samples[i].x) + lt::pi) / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
+        Float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
+        phi = phi > 0. ? phi : 2 * lt::pi + phi;
+        app_data.x[i] = phi / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
         app_data.y[i] = std::acos(app_data.samples[i].y) / lt::pi * (float)app_data.envmap->envmap.h;
     }
 

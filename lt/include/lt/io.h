@@ -9,9 +9,11 @@
 #include <lt/renderer.h>
 #include <lt/scene.h>
 #include <lt/texture.h>
-#include <tiny_exr/tinyexr.h>
 
+#include <tiny_exr/tinyexr.h>
 #include <nlohmann/json.hpp>
+
+#include <fstream>
 
 namespace LT_NAMESPACE {
 
@@ -271,6 +273,18 @@ static bool generate_from_json(const std::string& str, Scene& scn,
     scn.init_rtc();
 
     return true;
+}
+
+static bool generate_from_path(const std::string& path, Scene& scn, Renderer& ren) {
+    
+    std::ifstream t(path);
+    t.seekg(0, std::ios::end);
+    size_t size = t.tellg();
+    std::string str(size, ' ');
+    t.seekg(0);
+    t.read(&str[0], size);
+
+    return generate_from_json(str, scn, ren);
 }
 
 } // namespace LT_NAMESPACE

@@ -82,6 +82,9 @@ struct AppData {
     RenderSensor rs_brdf_sampling;
     std::shared_ptr<lt::Sensor> s_brdf_sampling_pdf;
     RenderSensor rs_brdf_sampling_pdf;
+    std::shared_ptr<lt::Sensor> s_brdf_sampling_diff;
+    RenderSensor rs_brdf_sampling_diff;
+
 
     lt::Sampler sampler;
 
@@ -115,6 +118,10 @@ void AppInit(AppData& app_data) {
     app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_sampling_pdf.sensor = app_data.s_brdf_sampling_pdf;
     app_data.rs_brdf_sampling_pdf.initialize();
+
+    app_data.s_brdf_sampling_diff = std::make_shared<lt::Sensor>(256, 64);
+    app_data.rs_brdf_sampling_diff.sensor = app_data.s_brdf_sampling_diff;
+    app_data.rs_brdf_sampling_diff.initialize();
 
 
 }
@@ -179,6 +186,8 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
         app_data.ren_glo_ill.reset();
         app_data.ren_dir_light.reset();
         app_data.s_brdf_sampling->reset();
+        app_data.s_brdf_sampling_pdf->reset();
+        app_data.s_brdf_sampling_diff->reset();
         need_reset = false;
     }
 
@@ -438,14 +447,20 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                     for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
                         for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
-                            lt::vec3 wo = lt::polar_to_card(th[y], ph[x]);
-                            app_data.s_brdf_sampling_pdf->set(x,y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
-;
+                            float jw = 2. * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->w;
+                            float jh = 0.5 * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->h;
+                            //float jw = 0.f;
+                            //float jh = 0.f;
+
+                            lt::vec3 wo = lt::polar_to_card(th[y] + jh, ph[x] + jw);
+                            app_data.s_brdf_sampling_pdf->add(x,y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
+                            app_data.s_brdf_sampling_diff->set(x,y,glm::abs(app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
                         }
                     }
 
                     app_data.rs_brdf_sampling.update_data();
                     app_data.rs_brdf_sampling_pdf.update_data();
+                    app_data.rs_brdf_sampling_diff.update_data();
 
                     if (ImPlot::BeginPlot("##sample", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling.sensor->w, app_data.rs_brdf_sampling.sensor->h));
@@ -454,6 +469,11 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                     if (ImPlot::BeginPlot("##sample_pdf", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_pdf.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_pdf.sensor->w, app_data.rs_brdf_sampling_pdf.sensor->h));
+                        ImPlot::EndPlot();
+                    }
+
+                    if (ImPlot::BeginPlot("##sample_diff", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_diff.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_diff.sensor->w, app_data.rs_brdf_sampling_diff.sensor->h));
                         ImPlot::EndPlot();
                     }
 
