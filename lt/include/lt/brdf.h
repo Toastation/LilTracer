@@ -152,16 +152,18 @@ public:
     vec3 sample(const vec3& wi, Sampler& sampler);
 
     Spectrum eval(vec3 wi, vec3 wo);
+
+    MICROSURFACE ms;
 };
 
 class SphereMicrosurface {
 public:
-    static Float D(const vec3& wh) { return 1. / pi; }
-    static Float pdf(const vec3& wh)
+    Float D(const vec3& wh) { return 1. / pi; }
+    Float pdf(const vec3& wh)
     {
         return square_to_cosine_hemisphere_pdf(wh);
     }
-    static vec3 sample_D(Sampler& sampler)
+    vec3 sample_D(Sampler& sampler)
     {
         return square_to_cosine_hemisphere(sampler.next_float(),
             sampler.next_float());
@@ -191,8 +193,8 @@ public:
 protected:
     void link_params()
     {
-        params.add("roughx", Params::Type::FLOAT, &scale[0]);
-        params.add("roughy", Params::Type::FLOAT, &scale[1]);
+        params.add("rough_x", Params::Type::FLOAT, &scale[0]);
+        params.add("rough_y", Params::Type::FLOAT, &scale[1]);
     }
 };
 

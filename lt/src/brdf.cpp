@@ -49,7 +49,7 @@ Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh)
 {
     Float det_m = 1. / std::abs(scale.x * scale.y);
     vec3 wu = to_unit_space(wh);
-    return MICROSURFACE::D(wu) * det_m * std::pow(wu.z / wh.z, 4.);
+    return ms.D(wu) * det_m * std::pow(wu.z / wh.z, 4.);
 }
 
 template <class MICROSURFACE>
@@ -58,7 +58,7 @@ Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wh) { return D(w
 template <class MICROSURFACE>
 vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(Sampler& sampler)
 {
-    return to_transformed_space(MICROSURFACE::sample_D(sampler));
+    return to_transformed_space(ms.sample_D(sampler));
 }
 
 template <class MICROSURFACE>
