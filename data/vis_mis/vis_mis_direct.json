@@ -6,26 +6,26 @@
     {
       "type": "GGXMicrosurface",
       "name": "plane1",
-      "roughx": 0.5,
-      "roughy": 0.5
+      "rough_x": 0.5,
+      "rough_y": 0.5
     },
     {
       "type": "GGXMicrosurface",
       "name": "plane2",
-      "roughx": 0.1,
-      "roughy": 0.1
+      "rough_x": 0.1,
+      "rough_y": 0.1
     },
     {
       "type": "GGXMicrosurface",
       "name": "plane3",
-      "roughx": 0.01,
-      "roughy": 0.01
+      "rough_x": 0.01,
+      "rough_y": 0.01
     },
     {
       "type": "GGXMicrosurface",
       "name": "plane4",
-      "roughx": 0.001,
-      "roughy": 0.001
+      "rough_x": 0.001,
+      "rough_y": 0.001
     },
     {
       "type": "Diffuse",
