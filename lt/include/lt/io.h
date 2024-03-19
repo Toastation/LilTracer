@@ -43,9 +43,9 @@ static void json_set_vec3(const json& j, vec3* ptr)
  * @param j The JSON value.
  * @param ptr Pointer to the string variable.
  */
-static void json_set_path(const json& j, std::string* ptr)
+static void json_set_path(const json& j, std::string* ptr, const std::string& dir)
 {
-    *ptr = std::string(j);
+    *ptr = dir + std::string(j);
 }
 
 /**
@@ -62,10 +62,11 @@ static void json_set_brdf(const json& j, std::shared_ptr<Brdf>* ptr,
     *ptr = ref[brdf_name];
 }
 
-static void json_set_texture(const json& j, Texture<Spectrum>* ptr)
+static void json_set_texture(const json& j, Texture<Spectrum>* ptr, const std::string& dir)
 {
-    std::string texture_name = j;
-    load_texture_exr(texture_name, *ptr);
+    std::string texture_path = dir + std::string(j);
+    if (load_texture_exr(texture_path, *ptr))
+        std::cerr << texture_path << " : cannot be loaded. " << std::endl;
 }
 
 /**
@@ -74,7 +75,7 @@ static void json_set_texture(const json& j, Texture<Spectrum>* ptr)
  * @param params The Params object containing parameter information.
  * @param brdf_ref Reference to the map of BRDFs.
  */
-static void set_params(const json& j, const Params& params,
+static void set_params(const json& j, const Params& params, const std::string& dir,
     std::map<std::string, std::shared_ptr<Brdf>>& brdf_ref)
 {
     for (int i = 0; i < params.count; i++) {
@@ -87,7 +88,7 @@ static void set_params(const json& j, const Params& params,
                 json_set_vec3(j[params.names[i]], (vec3*)params.ptrs[i]);
                 break;
             case Params::Type::PATH:
-                json_set_path(j[params.names[i]], (std::string*)params.ptrs[i]);
+                json_set_path(j[params.names[i]], (std::string*)params.ptrs[i], dir);
                 break;
             case Params::Type::BRDF:
                 json_set_brdf(j[params.names[i]],
@@ -95,7 +96,7 @@ static void set_params(const json& j, const Params& params,
                 break;
             case Params::Type::TEXTURE:
                 json_set_texture(j[params.names[i]],
-                    (Texture<Spectrum>*)params.ptrs[i]);
+                    (Texture<Spectrum>*)params.ptrs[i], dir);
                 break;
             default:
                 std::cerr << "json to Params::Type not defined" << std::endl;
@@ -118,7 +119,7 @@ static void set_params(const json& j, const Params& params,
  * @param ren Reference to the Renderer object to be filled.
  * @return True if the generation is successful, false otherwise.
  */
-static bool generate_from_json(const std::string& str, Scene& scn,
+static bool generate_from_json(const std::string& dir, const std::string& str, Scene& scn,
     Renderer& ren)
 {
     // Map to store references to BRDFs
@@ -145,7 +146,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
             return false;
 
         // Set parameters and initialize the integrator
-        set_params(json_integrator, integrator->params, brdf_ref);
+        set_params(json_integrator, integrator->params, dir, brdf_ref);
         integrator->init();
 
         // Set the integrator in the renderer
@@ -176,7 +177,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
             return false;
 
         // Set parameters and initialize the camera
-        set_params(json_camera, camera->params, brdf_ref);
+        set_params(json_camera, camera->params, dir, brdf_ref);
         camera->init();
 
         // Set the camera in the renderer
@@ -197,7 +198,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
             brdf_ref[json_brdf["name"]] = brdf;
 
             // Set parameters and initialize the BRDF
-            set_params(json_brdf, brdf->params, brdf_ref);
+            set_params(json_brdf, brdf->params, dir, brdf_ref);
             brdf->init();
 
             // Add the BRDF to the scene
@@ -216,7 +217,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
             return false;
 
         // Set parameters and initialize the camera
-        set_params(json_background, envmap->params, brdf_ref);
+        set_params(json_background, envmap->params, dir, brdf_ref);
         envmap->init();
 
         // Set the camera in the renderer
@@ -231,7 +232,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
                 return false;
 
             // Set parameters and initialize the light
-            set_params(json_light, light->params, brdf_ref);
+            set_params(json_light, light->params, dir, brdf_ref);
             light->init();
 
             // Add the light to the scene
@@ -251,7 +252,7 @@ static bool generate_from_json(const std::string& str, Scene& scn,
                 return false;
 
             // Set parameters and initialize the geometry
-            set_params(json_geometry, geometry->params, brdf_ref);
+            set_params(json_geometry, geometry->params, dir, brdf_ref);
             geometry->init();
 
             if (geometry->brdf->emissive() && geometry->type == "Sphere") {
@@ -284,7 +285,10 @@ static bool generate_from_path(const std::string& path, Scene& scn, Renderer& re
     t.seekg(0);
     t.read(&str[0], size);
 
-    return generate_from_json(str, scn, ren);
+    std::filesystem::path std_path(path);
+    std::filesystem::path std_dir = std_path.parent_path();
+
+    return generate_from_json(std_dir.string()+"/", str, scn, ren);
 }
 
 } // namespace LT_NAMESPACE

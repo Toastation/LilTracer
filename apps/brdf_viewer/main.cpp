@@ -101,7 +101,7 @@ void AppInit(AppData& app_data) {
     app_data.rsen_dir_light.initialize();
     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
-    lt::prob_scn(app_data.scn_glo_ill, app_data.ren_glo_ill);
+    lt::generate_from_path("../../../data/lte-orb/lte-orb.json",app_data.scn_glo_ill, app_data.ren_glo_ill);
     app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
     app_data.rsen_glo_ill.initialize();
     app_data.scn_glo_ill.geometries[1]->brdf = app_data.brdfs[app_data.current_brdf_idx];
