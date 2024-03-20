@@ -108,6 +108,8 @@ public:
         value[idx] = acculumator[idx] / (Float)count[idx];
         //  Gamma correction
         value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+
+        assert(value[idx] == value[idx]);
     }
 
     uint32_t w; /**< Width of the sensor. */

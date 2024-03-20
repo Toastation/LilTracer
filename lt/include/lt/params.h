@@ -16,6 +16,7 @@ struct Params {
      * @brief Enum defining the types of parameters.
      */
     enum class Type {
+        BOOL, /**< BOOL type parameter. */
         FLOAT, /**< Float type parameter. */
         INT, /**< Int type parameter. */
         VEC3, /**< Vector3 type parameter. */

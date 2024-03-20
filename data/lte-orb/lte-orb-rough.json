@@ -1,28 +1,30 @@
 {
+  "max_sample": 8,
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "BrdfIntegrator"
   },
   "brdf": [
     {
       "type": "Diffuse",
       "name": "base",
-      "albedo": [ 0.2, 0.2, 0.2 ]
+      "albedo": [ 0.4, 0.4, 0.7 ]
     },
     {
       "type": "Diffuse",
       "name": "floor",
-      "albedo": [ 0.4, 0.4, 0.4 ]
+      "albedo": [ 0.8, 0.8, 0.8 ]
     },
     {
-      "type": "Diffuse",
+      "type": "RoughGGX",
       "name": "mat",
-      "albedo": [ 0.5, 0.4, 0.3 ]
+      "rough_x": 0.025,
+      "rough_y": 0.025
     }
   ],
   "background": {
     "type": "EnvironmentLight",
     "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
-    "intensity": 1.0
+    "intensity": 0.5
   },
   "nlight": [
     {

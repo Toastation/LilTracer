@@ -70,13 +70,15 @@ inline vec3 square_to_cosine_hemisphere(Float u1, Float u2)
     Float theta = 2. * pi * u2;
     Float dx = r * std::cos(theta);
     Float dy = r * std::sin(theta);
-    Float z = std::sqrt(1. - dx * dx - dy * dy);
+    Float z = std::sqrt(glm::clamp(1.f - dx * dx - dy * dy,0.00001f,1.f));
+    if (z != z)
+        std::cout << "ff" << std::endl;
     return vec3(dx, dy, z);
 }
 
 inline Float square_to_cosine_hemisphere_pdf(const vec3& w)
 {
-    return w[2] / pi;
+    return glm::clamp(w.z,0.f,1.f) / pi;
 }
 
 inline void orthonormal_basis(const vec3& n, vec3& t, vec3& b)

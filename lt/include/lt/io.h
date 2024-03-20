@@ -21,6 +21,13 @@ namespace LT_NAMESPACE {
 using json = nlohmann::json;
 
 /**
+ * @brief Set a bool value from JSON.
+ * @param j The JSON value.
+ * @param ptr Pointer to the bool variable.
+ */
+static void json_set_bool(const json& j, bool* ptr) { *ptr = (bool)j; }
+
+/**
  * @brief Set a float value from JSON.
  * @param j The JSON value.
  * @param ptr Pointer to the float variable.
@@ -30,7 +37,7 @@ static void json_set_float(const json& j, float* ptr) { *ptr = j; }
 /**
  * @brief Set a int value from JSON.
  * @param j The JSON value.
- * @param ptr Pointer to the float variable.
+ * @param ptr Pointer to the int variable.
  */
 static void json_set_int(const json& j, int* ptr) { *ptr = j; }
 
@@ -90,6 +97,9 @@ static void set_params(const json& j, const Params& params, const std::string& d
     for (int i = 0; i < params.count; i++) {
         if (j.contains(params.names[i])) {
             switch (params.types[i]) {
+            case Params::Type::BOOL:
+                json_set_bool(j[params.names[i]], (bool*)params.ptrs[i]);
+                break;
             case Params::Type::FLOAT:
                 json_set_float(j[params.names[i]], (float*)params.ptrs[i]);
                 break;

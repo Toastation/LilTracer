@@ -12,9 +12,15 @@ int main(int argc, char* argv[])
 
         lt::generate_from_path(argv[a], scn, ren);
 
+        float time = 0.;
+
         for (int s = 0; s < ren.max_sample;  s++) {
-            std::cout << ren.render(scn) << std::endl;
+            float t = ren.render(scn);
+            std::cout << s << ":" << t << std::endl;
+            time += t;
         }
+
+        std::cout << "Time elapsed : " << time << " (ms) " << std::endl;
 
         lt::save_sensor_exr(*ren.sensor,std::string(argv[a])+".exr");
         

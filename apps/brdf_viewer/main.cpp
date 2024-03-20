@@ -85,9 +85,9 @@ struct AppData {
     std::shared_ptr<lt::Sensor> s_brdf_sampling_diff;
     RenderSensor rs_brdf_sampling_diff;
 
-
     lt::Sampler sampler;
 
+    lt::BrdfValidation validation;
 };
 
 void AppInit(AppData& app_data) {
@@ -235,6 +235,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             for (int i = 0; i < cur_brdf->params.count; i++) {
                 switch (cur_brdf->params.types[i])
                 {
+                case lt::Params::Type::BOOL:
+                    NEED_RESET(ImGui::Checkbox(cur_brdf->params.names[i].c_str(), (bool*)cur_brdf->params.ptrs[i]));
+                    break;
                 case lt::Params::Type::FLOAT:
                     NEED_RESET(ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i], 0.01,0.001,3.));
                     break;
@@ -482,8 +485,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
-                    auto ms_per_pix = app_data.ren_dir_light.render(app_data.scn_dir_light);
-                    //std::cout << ms_per_pix << std::endl;
+                    auto ms_per_frame = app_data.ren_dir_light.render(app_data.scn_dir_light);
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
@@ -496,8 +498,6 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
-                    //auto ms_per_pix = app_data.ren_glo_ill.render(app_data.scn_glo_ill);
-                    //std::cout << ms_per_pix << std::endl;
                     app_data.ren_glo_ill.render(app_data.scn_glo_ill);
                     app_data.rsen_glo_ill.update_data();
 
@@ -505,6 +505,39 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.spec_id, ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
                         ImPlot::EndPlot();
                     }
+
+                    if (ImGui::Button("Save")) {
+                        lt::save_sensor_exr(*app_data.ren_glo_ill.sensor, "save_global_illu.exr");
+                    }
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Validation"))
+                {
+                    
+                    if (ImGui::Button("Validate brdf model")) {
+                        lt::BrdfValidation::validate(*app_data.brdfs[app_data.current_brdf_idx]);
+                    }
+                    ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.correct_sampling ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+                    ImGui::Text("Correct sampling");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.found_nan ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+                    ImGui::Text("Found nan");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.negative_value ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+                    ImGui::Text("Found negative values");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.reciprocity ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+                    ImGui::Text("Reciprocity");
+                    ImGui::PopStyleColor();
+
+                    ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.energy_conservative ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
+                    ImGui::Text("Reciprocity");
+                    ImGui::PopStyleColor();
 
                     ImGui::EndTabItem();
                 }

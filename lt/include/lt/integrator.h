@@ -36,7 +36,7 @@ public:
      * @param sensor The sensor to capture the rendered image.
      * @param scene The scene to render.
      * @param sampler The sampler used for sampling.
-     * @return The time taken per pixel in milliseconds.
+     * @return The time taken in milliseconds.
      */
     float render(std::shared_ptr<Camera> camera, std::shared_ptr<Sensor> sensor,
         Scene& scene, Sampler& sampler)
@@ -95,9 +95,8 @@ public:
         n_sample++;
 
         auto t2 = std::chrono::high_resolution_clock::now();
-        float delta_time = (t2 - t1).count();
-        // return ms per pixel
-        return delta_time / (sensor->h * sensor->w);
+        float delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+        return delta_time;
     };
 
     /**
@@ -236,16 +235,26 @@ public:
             // Compute BRDF  contrib
             vec3 wi = si.to_local(-r.d);
             vec3 wo = si.brdf->sample(wi, sampler);
+
+            if (wo.z < 0.000001 || wi.z < 0.000001)
+                return s;
+
             Float pdf = si.brdf->pdf(wi, wo);
             Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
-
+            
             Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(wo));
             Spectrum indirect = render_pixel_rec(r_, scene, sampler, depth + 1);
-
             s += brdf_cos_weighted * indirect / pdf;
+
+
+            assert(brdf_cos_weighted.x == brdf_cos_weighted.x);
+            assert(s.x >= 0);
+            assert(s.x == s.x);
+            
         } else {
-            for (const auto& light : scene.infinite_lights)
+            for (const auto& light : scene.infinite_lights) {
                 s += light->eval(r.d);
+            }
         }
 
         return s;
@@ -310,7 +319,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , depth(1)
+        , depth(8)
     {
         link_params();
     };

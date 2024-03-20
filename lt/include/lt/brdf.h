@@ -134,26 +134,32 @@ public:
         : Brdf(type)
     {
         scale = vec3(scale_x, scale_y, 1.);
+        sample_visible_distribution = false;
     }
 
-    virtual Float sigma(const vec3& wi) = 0;
-    virtual Float lambda(const vec3& wi, const float& alpha) = 0;
-    virtual Float G1(const vec3& wi) = 0;
 
     Float scale_wi(const vec3& wi) const;
-    vec3 to_transformed_space(const vec3& wi);
     vec3 to_unit_space(const vec3& wi);
+    vec3 to_transformed_space(const vec3& wi);
+    
+    Float G1(const vec3& wh, const vec3& wi);
 
     Float D(const vec3& wh);
-    Float pdf(const vec3& wh);
+    Float pdf_wh(const vec3& wh);
+    
+    Float D(const vec3& wh, const vec3& wi);
+    Float pdf_wh(const vec3& wh, const vec3& wi);
+    
     Float pdf(const vec3& wi, const vec3& wo);
 
     vec3 sample_D(Sampler& sampler);
+    vec3 sample_D(const vec3& wi, Sampler& sampler);
     vec3 sample(const vec3& wi, Sampler& sampler);
 
     Spectrum eval(vec3 wi, vec3 wo);
 
     MICROSURFACE ms;
+    bool sample_visible_distribution;
 };
 
 class SphereMicrosurface {
@@ -168,34 +174,87 @@ public:
         return square_to_cosine_hemisphere(sampler.next_float(),
             sampler.next_float());
     }
+    
+    
+    Float lambda(const vec3& wi)
+    {
+        Float cos_sqr = glm::clamp(wi.z * wi.z, 0.0001f, 0.9999f);
+        Float tan_sqr = (1. - cos_sqr) / cos_sqr;
+        return (-1. + std::sqrt(1. + tan_sqr)) / 2.;
+    }
+    Float G1(const vec3& wh, const vec3& wi) {
+        return 1. / (1. + lambda(wi));
+    }
+    Float D(const vec3& wh, const vec3& wi) { return G1(wh,wi) * glm::clamp(glm::dot(wi,wh),0.f,1.f) / (wi.z * pi); }
+    Float pdf(const vec3& wh, const vec3& wi)
+    {
+        return D(wh, wi);
+    }
+    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
+    vec3 sample_D(const vec3& wi, Sampler& sampler)
+    {
+        float phi = 2. * pi * sampler.next_float();
+        float z = std::fma(1. - sampler.next_float(), 1 + wi.z, -wi.z);
+        float sin_theta = std::sqrt(std::clamp(1. - z * z, 0., 1.));
+        float x = sin_theta * std::cos(phi);
+        float y = sin_theta * std::sin(phi);
+        return glm::normalize(wi + vec3(x,y,z));
+    }
+
 };
 
-class GGXMicrosurface : public ShapeInvariantMicrosurface<SphereMicrosurface> {
+class RoughGGX : public ShapeInvariantMicrosurface<SphereMicrosurface> {
 public:
-    GGXMicrosurface()
-        : ShapeInvariantMicrosurface<SphereMicrosurface>("GGXMicrosurface", 0.1,
+    RoughGGX()
+        : ShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", 0.1,
             0.1)
     {
         link_params();
     }
 
-    GGXMicrosurface(const Float& scale_x, const Float& scale_y)
-        : ShapeInvariantMicrosurface<SphereMicrosurface>("GGXMicrosurface",
+    RoughGGX(const Float& scale_x, const Float& scale_y)
+        : ShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX",
             scale_x, scale_y)
     {
         link_params();
     }
 
-    Float sigma(const vec3& wi);
-    Float lambda(const vec3& wi, const float& alpha);
-    Float G1(const vec3& wi);
 
+    
 protected:
     void link_params()
     {
         params.add("rough_x", Params::Type::FLOAT, &scale[0]);
         params.add("rough_y", Params::Type::FLOAT, &scale[1]);
+        params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
     }
 };
+
+
+
+
+struct BrdfValidation {
+    std::vector<Float> directionnal_albedo;
+    bool energy_conservative; // all  directionnal_albedo <  1
+    bool correct_sampling;    // sample = pdf
+    bool reciprocity;
+    bool found_nan;
+    bool negative_value;
+
+    BrdfValidation() : 
+        energy_conservative(false),
+        correct_sampling(false),
+        reciprocity(true),
+        found_nan(false),
+        negative_value(false)
+    {}
+    
+    static BrdfValidation validate(const Brdf& brdf){
+        std::cout << "validate " << brdf.type << std::endl;
+        return BrdfValidation();
+    }
+};
+
+
 
 } // namespace LT_NAMESPACE
