@@ -319,7 +319,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , depth(8)
+        , max_depth(8)
     {
         link_params();
     };
@@ -329,7 +329,7 @@ public:
         Spectrum attenuation(1.);
         Spectrum s(0.);
 
-        for (int d = 0; d < depth; d++) {
+        for (int d = 0; d < max_depth; d++) {
             SurfaceInteraction si;
             if (scene.intersect(r, si)) {
                 if (!si.brdf) {
@@ -366,9 +366,12 @@ public:
         return s;
     }
 
-    uint32_t depth; /**< Maximum depth of path tracing. */
+    uint32_t max_depth; /**< Maximum depth of path tracing. */
 protected:
-    void link_params() { }
+    void link_params() 
+    { 
+        params.add("max_depth", Params::Type::INT, &max_depth);
+    }
 };
 
 /**

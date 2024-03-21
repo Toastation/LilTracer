@@ -4,25 +4,25 @@
   },
   "brdf": [
     {
-      "type": "GGXMicrosurface",
+      "type": "RoughGGX",
       "name": "plane1",
       "rough_x": 0.5,
       "rough_y": 0.5
     },
     {
-      "type": "GGXMicrosurface",
+      "type": "RoughGGX",
       "name": "plane2",
       "rough_x": 0.1,
       "rough_y": 0.1
     },
     {
-      "type": "GGXMicrosurface",
+      "type": "RoughGGX",
       "name": "plane3",
       "rough_x": 0.01,
       "rough_y": 0.01
     },
     {
-      "type": "GGXMicrosurface",
+      "type": "RoughGGX",
       "name": "plane4",
       "rough_x": 0.001,
       "rough_y": 0.001
