@@ -219,7 +219,9 @@ public:
         link_params();
     }
 
-
+    void init() {
+        std::cout << "Blabla : " << sample_visible_distribution << std::endl;
+    }
     
 protected:
     void link_params()

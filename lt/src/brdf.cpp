@@ -66,7 +66,7 @@ Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh, const vec3& wi
     Float det_m = 1. / std::abs(scale.x * scale.y);
     vec3 wh_l = to_transformed_space(wh);
     vec3 wi_l = to_unit_space(wi);
-    return ms.D(wh_l,wi_l) * det_m * std::pow(wh_l.z / wh.z, 4.);
+    return ms.D(wh_l,wi_l) * det_m * std::pow(wh_l.z / wh.z, 3.);
 }
 
 template <class MICROSURFACE>

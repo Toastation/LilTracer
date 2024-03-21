@@ -1,6 +1,6 @@
 {
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "BrdfIntegrator"
   },
   "brdf": [
     {

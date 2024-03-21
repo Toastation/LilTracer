@@ -1,5 +1,5 @@
 {
-  "max_sample": 8,
+  "max_sample": 512,
   "integrator": {
     "type": "BrdfIntegrator"
   },
@@ -17,8 +17,9 @@
     {
       "type": "RoughGGX",
       "name": "mat",
-      "rough_x": 0.025,
-      "rough_y": 0.025
+      "rough_x": 0.25,
+      "rough_y": 0.25,
+      "sample_visible_distribution" : true
     }
   ],
   "background": {
