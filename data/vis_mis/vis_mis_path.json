@@ -1,8 +1,9 @@
 {
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "PathIntegrator",
+    "max_depth" : 16  
   },
-  "max_sample": 128,
+  "max_sample" :  4,
   "brdf": [
     {
       "type": "RoughGGX",

@@ -19,12 +19,16 @@ int Light::geometry_id() { return -1; }
 
 void DirectionnalLight::init() { dir = glm::normalize(dir); }
 
-void DirectionnalLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
-    Float& pdf, Sampler& sampler)
+Light::Sample DirectionnalLight::sample(const SurfaceInteraction& si, Sampler& sampler)
 {
-    direction = dir;
-    emission = Spectrum(intensity);
-    pdf = 1;
+    Sample s;
+    s.direction = dir;
+    s.emission = Spectrum(intensity);
+    s.pdf = 1;
+    s.expected_distance_to_intersection = std::numeric_limits<Float>::infinity();
+    s.has_geometry = false;
+    return s;
+
 }
 
 Spectrum DirectionnalLight::eval(const vec3& direction) { return Spectrum(intensity); }
@@ -70,12 +74,13 @@ void EnvironmentLight::init()
     c.insert(c.begin(), 0.);
 }
 
-void EnvironmentLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
-    Float& pdf, Sampler& sampler)
+Light::Sample EnvironmentLight::sample(const SurfaceInteraction& si, Sampler& sampler)
 {
+    Sample s;
 #if 0
-    direction = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
-    pdf = square_to_uniform_sphere_pdf();
+    s.direction = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
+    s.pdf = square_to_uniform_sphere_pdf();
+    Float solid_angle = 1.;
 #endif // 0
 #if 1
     Float u = sampler.next_float();
@@ -97,14 +102,18 @@ void EnvironmentLight::sample(const SurfaceInteraction& si, vec3& direction, vec
     
     Float solid_angle = sin(theta) * dphi * dtheta;
     
-    pdf = density.get(x, y);
     
     theta += dtheta * (sampler.next_float() - 0.5);
     phi += dphi * (sampler.next_float() - 0.5);
 
-    direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+    s.pdf = density.get(x, y);
+    s.direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 #endif
-    emission = eval(direction) * solid_angle;
+    s.emission = eval(s.direction) * solid_angle;
+    s.has_geometry = false;
+    s.expected_distance_to_intersection = std::numeric_limits<Float>::infinity();
+
+    return s;
 }
 
 Spectrum EnvironmentLight::eval(const vec3& direction)
@@ -157,52 +166,64 @@ void EnvironmentLight::compute_density()
 
 glm::mat3 SphereLight::build_from_w(const vec3& w)
 {
-    vec3 unit_w = glm::normalize(w);
-    vec3 a = (std::abs(unit_w.x) > 0.9) ? vec3(0, 1, 0) : vec3(1, 0, 0);
-    vec3 v = glm::normalize(glm::cross(unit_w, a));
-    vec3 u = glm::normalize(glm::cross(unit_w, v));
-    return (glm::mat3(u, v, unit_w));
+    vec3 normal = w;
+    float sign = copysignf(1.0f, normal.z);
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
+    vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
+    return glm::mat3(tangent, bitangent, normal);
 }
 
-void SphereLight::sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
-    Float& pdf, Sampler& sampler)
+Light::Sample SphereLight::sample(const SurfaceInteraction& si, Sampler& sampler)
 {
+    Sample s;
 #if 0
     vec3 point = square_to_uniform_sphere(sampler.next_float(), sampler.next_float());
     vec3 point_on_surface = point * sphere->rad + sphere->pos;
 
-    direction = si.pos - point_on_surface;
+    vec3 direction = si.pos - point_on_surface;
     Float distance = glm::length(direction);
     direction /= distance;
 
     Float light_cosine = glm::dot(si.nor, -direction);
     Float light_area = 4. * pi * sphere->rad * sphere->rad;
-    pdf = distance * distance / (light_area * light_cosine);
+
+    s.direction = direction;
+    s.pdf = distance * distance / (light_area * light_cosine);
+    s.expected_distance_to_intersection = distance;
 #endif
 
 #if 1
-    direction = sphere->pos - si.pos;
+    vec3 direction = sphere->pos - si.pos;
     Float distance = glm::length(direction);
     direction /= distance;
 
-    Float cos_theta_max = std::sqrt(1. - sphere->rad * sphere->rad / (distance * distance));
+    Float dist_sqr = distance * distance;
+    Float rad_sqr = sphere->rad * sphere->rad;
+
+    Float cos_theta_max = std::sqrt(1. - rad_sqr / dist_sqr);
     Float solid_angle = 2. * pi * (1 - cos_theta_max);
-    pdf = 1. / solid_angle;
 
+    Float u = sampler.next_float();
+    Float cos_theta = (1 - u) + u * cos_theta_max;
+    Float cos_theta_sqr = cos_theta * cos_theta;
+    Float sin_theta = std::sqrt(1 - cos_theta_sqr);
 
-    // random to sphere 
-    Float z = 1 + sampler.next_float() * (cos_theta_max - 1);
-
-    auto phi = 2 * pi * sampler.next_float();
-    auto x = cos(phi) * sqrt(1 - z * z);
-    auto y = sin(phi) * sqrt(1 - z * z);
-    vec3 local = vec3(x, y, z);
+    Float phi = 2 * pi * sampler.next_float();
+    Float x = cos(phi) * sin_theta;
+    Float y = sin(phi) * sin_theta;
+    vec3 cone_sample = vec3(x, y, cos_theta);
 
     glm::mat3 uvw = build_from_w(direction);
-    direction = -glm::normalize(uvw * local);
-#endif
+    s.direction = -glm::normalize(uvw * cone_sample);
+    s.pdf = 1. / solid_angle;
+    s.expected_distance_to_intersection = distance * cos_theta - std::sqrt(rad_sqr - dist_sqr * (1 - cos_theta_sqr));
 
-    emission = sphere->brdf->emission();
+#endif
+    s.has_geometry = true;
+    s.emission = sphere->brdf->emission();
+    return s;
 }
 
 Spectrum SphereLight::eval(const vec3& direction) { return sphere->brdf->emission(); }
@@ -210,5 +231,5 @@ Spectrum SphereLight::eval(const vec3& direction) { return sphere->brdf->emissio
 bool SphereLight::has_geometry() { return true; }
 int SphereLight::geometry_id() { return sphere->rtc_id; }
 
-
+ 
 } // namespace LT_NAMESPACE

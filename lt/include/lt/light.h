@@ -19,21 +19,24 @@ namespace LT_NAMESPACE {
  */
     class Light : public Serializable {
     public:
+        struct Sample {
+            vec3 direction;
+            vec3 emission;
+            Float pdf;
+            Float expected_distance_to_intersection;
+            bool has_geometry;
+        };
+
         /**
          * @brief Constructor for Light.
-         * @param type The type of light.
+         * @param type The type of light. ex : DirectionnalLight, EnvironmentLight ...
          */
         Light(const std::string& type)
             : Serializable(type)
         {
         }
 
-        /**
-         * @brief Pure virtual function for sampling light direction.
-         */
-        virtual void sample(const SurfaceInteraction& si, vec3& direction,
-            vec3& emission, Float& pdf, Sampler& sampler)
-            = 0;
+        virtual Sample sample(const SurfaceInteraction& si, Sampler& sampler) = 0;
 
         virtual Spectrum eval(const vec3& direction) = 0;
 
@@ -60,7 +63,7 @@ public:
      * @brief Sample the direction of the light.
      * @return The direction of the light.
      */
-    void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler);
+    Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
 
@@ -95,8 +98,7 @@ public:
         link_params();
     }
 
-    void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission,
-        Float& pdf, Sampler& sampler);
+    Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
 
@@ -134,7 +136,7 @@ public:
 
     glm::mat3 build_from_w(const vec3& w);
 
-    void sample(const SurfaceInteraction& si, vec3& direction, vec3& emission, Float& pdf, Sampler& sampler);
+    Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
 

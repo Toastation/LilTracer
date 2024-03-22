@@ -438,7 +438,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, app_data.s_brdf_sampling->w);
 
                     for (int i = 0; i < 10000; i++) {
-                        lt::vec3 wo = app_data.brdfs[app_data.current_brdf_idx]->sample(wi, app_data.sampler);
+                        lt::vec3 wo = app_data.brdfs[app_data.current_brdf_idx]->sample(wi, app_data.sampler).wo;
                         float phi = std::atan2(wo.y, wo.x);
                         phi = phi < 0 ? 2 * lt::pi + phi : phi;
                         float x = phi / (2. * lt::pi) * (float)app_data.s_brdf_sampling->w;

@@ -1,9 +1,9 @@
 {
   "integrator": {
     "type": "BrdfIntegrator",
-    "max_depth" : 16  
+    "max_depth" : 1
   },
-  "max_sample" :  4,
+  "max_sample" :  128,
   "brdf": [
     {
       "type": "RoughGGX",

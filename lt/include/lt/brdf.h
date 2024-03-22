@@ -20,6 +20,12 @@ namespace LT_NAMESPACE {
  */
 class Brdf : public Serializable {
 public:
+
+    struct Sample {
+        vec3 wo;
+        Spectrum value; // brdf / pdf
+    };
+
     /**
      * @brief Constructor.
      * @param type The type of the BRDF.
@@ -41,7 +47,7 @@ public:
      * @param sampler The sampler object used for sampling.
      * @return The sampled direction.
      */
-    virtual vec3 sample(const vec3& wi, Sampler& sampler);
+    virtual Sample sample(const vec3& wi, Sampler& sampler);
 
     /**
      * @brief Computes the density of a sample of wo.
@@ -154,7 +160,7 @@ public:
 
     vec3 sample_D(Sampler& sampler);
     vec3 sample_D(const vec3& wi, Sampler& sampler);
-    vec3 sample(const vec3& wi, Sampler& sampler);
+    Sample sample(const vec3& wi, Sampler& sampler);
 
     Spectrum eval(vec3 wi, vec3 wo);
 
@@ -242,7 +248,6 @@ protected:
     {
         params.add("rough_x", Params::Type::FLOAT, &scale[0]);
         params.add("rough_y", Params::Type::FLOAT, &scale[1]);
-        params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
     }
 };
 

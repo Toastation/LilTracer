@@ -16,6 +16,8 @@
 
 #include <chrono>
 
+//#define SAMPLE_OPTIM
+
 namespace LT_NAMESPACE {
 
 class Integrator : public Serializable {
@@ -180,24 +182,17 @@ public:
         const std::shared_ptr<Light>& light, Scene& scene,
         Sampler& sampler)
     {
-        vec3 light_direction;
-        vec3 light_emission;
-        Float light_pdf;
-        light->sample(si, light_direction, light_emission, light_pdf, sampler);
+        si.pos -= r.d * 0.00001f;
 
-        vec3 wo = si.to_local(-light_direction);
+        Light::Sample light_sample = light->sample(si, sampler);
+
+        vec3 wo = si.to_local(-light_sample.direction);
         vec3 wi = si.to_local(-r.d);
 
-        Ray rs(si.pos - r.d * 0.0001f, -light_direction);
+        Ray rs(si.pos, -light_sample.direction);
 
-        std::shared_ptr<Geometry> geom = scene.intersect(rs);
-
-        if (geom) {
-            if (light->has_geometry() && (light->geometry_id() == geom->rtc_id)) {
-                return si.brdf->eval(wi, wo) * light_emission / light_pdf;
-            }
-        } else {
-            return si.brdf->eval(wi, wo) * light_emission / light_pdf;
+        if (!scene.shadow(rs, light_sample.expected_distance_to_intersection-0.00001)) {
+            return si.brdf->eval(wi, wo) * light_sample.emission / light_sample.pdf;
         }
 
         return Spectrum(0.);
@@ -234,20 +229,26 @@ public:
 
             // Compute BRDF  contrib
             vec3 wi = si.to_local(-r.d);
-            vec3 wo = si.brdf->sample(wi, sampler);
+            Brdf::Sample bs = si.brdf->sample(wi, sampler);
 
-            if (wo.z < 0.000001 || wi.z < 0.000001)
+            if (bs.wo.z < 0.000001 || wi.z < 0.000001)
                 return s;
 
-            Float pdf = si.brdf->pdf(wi, wo);
-            Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
-            
-            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(wo));
-            Spectrum indirect = render_pixel_rec(r_, scene, sampler, depth + 1);
-            s += brdf_cos_weighted * indirect / pdf;
-
-
+            #if !defined(SAMPLE_OPTIM)
+            Float pdf = si.brdf->pdf(wi, bs.wo);
+            Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo);
             assert(brdf_cos_weighted.x == brdf_cos_weighted.x);
+            #endif
+
+            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            Spectrum indirect = render_pixel_rec(r_, scene, sampler, depth + 1);
+            
+            #if !defined(SAMPLE_OPTIM)
+            s += brdf_cos_weighted * indirect / pdf;
+            #else
+            s += bs.value * indirect;
+            #endif
+
             assert(s.x >= 0);
             assert(s.x == s.x);
             
@@ -338,23 +339,28 @@ public:
                     continue;
                 }
 
-                vec3 p = si.pos - r.d * 0.00001f;
 
                 // Compute Light contrib
                 s += attenuation * uniform_sample_one_light(r, si, scene, sampler);
 
                 // Compute BRDF  contrib
                 vec3 wi = si.to_local(-r.d);
-                vec3 wo = si.brdf->sample(wi, sampler);
+                Brdf::Sample bs = si.brdf->sample(wi, sampler);
 
-                if (wo.z < 0.001)
+                if (bs.wo.z < 0.0001)
                     break;
-
-                Float wo_pdf = si.brdf->pdf(wi, wo);
-                Spectrum brdf_cos_weighted = si.brdf->eval(wi, wo);
+                
+                #if !defined(SAMPLE_OPTIM)
+                Float wo_pdf = si.brdf->pdf(wi, bs.wo);
+                Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo);
                 attenuation *= brdf_cos_weighted / wo_pdf;
+                #else
+                attenuation *= bs.value;
+                #endif
 
-                r = Ray(p, si.to_world(wo));
+                // offset si.pos for next bounce
+                vec3 p = si.pos - r.d * 0.00001f;
+                r = Ray(p, si.to_world(bs.wo));
             } else {
                 for (const auto& light : scene.infinite_lights)
                     s += attenuation * light->eval(r.d);
@@ -403,7 +409,7 @@ public:
 
                 rs.d = si.to_world(wi);
 
-                if (!scene.intersect(rs))
+                if (!scene.shadow(rs))
                     s += Spectrum(1.) / (float(nSample));
             }
         }

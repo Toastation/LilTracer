@@ -62,8 +62,8 @@ public:
      * @param r The ray to check for intersection.
      * @return True if the ray intersects with the scene, false otherwise.
      */
-    /*bool intersect(const Ray &r) {
-      RTCRay ray;
+    bool shadow(const Ray &r, const Float& tfar = std::numeric_limits<Float>::infinity()) {
+      /*RTCRay ray;
       ray.org_x = r.o.x;
       ray.org_y = r.o.y;
       ray.org_z = r.o.z;
@@ -71,7 +71,7 @@ public:
       ray.dir_y = r.d.y;
       ray.dir_z = r.d.z;
       ray.tnear = 0.f;
-      ray.tfar = std::numeric_limits<float>::infinity();
+      ray.tfar = tfar;
       ray.flags = 0;
 
       rtcOccluded1(scene, &context, &ray);
@@ -80,9 +80,48 @@ public:
         return true;
       }
 
-      return false;
-    }*/
+      return false;*/
 
+    //RTCRayHit rayhit;
+    //rayhit.ray.org_x = r.o.x;
+    //rayhit.ray.org_y = r.o.y;
+    //rayhit.ray.org_z = r.o.z;
+    //rayhit.ray.dir_x = r.d.x;
+    //rayhit.ray.dir_y = r.d.y;
+    //rayhit.ray.dir_z = r.d.z;
+    //rayhit.ray.tnear = 0.f;
+    //rayhit.ray.tfar = std::numeric_limits<float>::infinity();
+    //rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+
+    //rtcIntersect1(scene, &context, &rayhit);
+
+    //if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID && rayhit.ray.tfar < tfar) {
+    //    return true;
+    //}
+
+    //return false;
+
+    RTCRayHit rayhit;
+    rayhit.ray.org_x = r.o.x;
+    rayhit.ray.org_y = r.o.y;
+    rayhit.ray.org_z = r.o.z;
+    rayhit.ray.dir_x = r.d.x;
+    rayhit.ray.dir_y = r.d.y;
+    rayhit.ray.dir_z = r.d.z;
+    rayhit.ray.tnear = 0.f;
+    rayhit.ray.tfar = std::numeric_limits<float>::infinity();
+    rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+
+    rtcIntersect1(scene, &context, &rayhit);
+
+    if (rayhit.ray.tfar < tfar) {
+        return true;
+    }
+
+    return false;
+    }
+
+    /*
     std::shared_ptr<Geometry> intersect(const Ray& r)
     {
         RTCRayHit rayhit;
@@ -103,7 +142,7 @@ public:
         }
 
         return nullptr;
-    }
+    }*
 
     /**
      * @brief Initialize Embree RTC device and scene.

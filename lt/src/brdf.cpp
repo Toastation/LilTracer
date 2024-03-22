@@ -20,11 +20,33 @@ Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
 /////////////////////
 // Base 
 ///////////////////
-Spectrum Brdf::eval(vec3 wi, vec3 wo) { return Spectrum(0.); };
-vec3 Brdf::sample(const vec3& wi, Sampler& s) { return square_to_cosine_hemisphere(s.next_float(), s.next_float()); }
-float Brdf::pdf(const vec3& wi, const vec3& wo) { return square_to_cosine_hemisphere_pdf(wo); }
-bool Brdf::emissive() { return false; }
-Spectrum Brdf::emission() { return Spectrum(0.); }
+Spectrum Brdf::eval(vec3 wi, vec3 wo) 
+{
+    return Spectrum(0.); 
+};
+
+Brdf::Sample Brdf::sample(const vec3& wi, Sampler& s)
+{ 
+    Sample bs;
+    bs.wo = square_to_cosine_hemisphere(s.next_float(), s.next_float());
+    bs.value = eval(wi, bs.wo) / pdf(wi, bs.wo);
+    return bs;
+}
+
+float Brdf::pdf(const vec3& wi, const vec3& wo) 
+{
+    return square_to_cosine_hemisphere_pdf(wo); 
+}
+
+bool Brdf::emissive() 
+{ 
+    return false;
+}
+
+Spectrum Brdf::emission() 
+{
+    return Spectrum(0.); 
+}
 
 
 /////////////////////
@@ -122,10 +144,13 @@ vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(const vec3& wi, Sampler&
 
 
 template <class MICROSURFACE>
-vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
+Brdf::Sample ShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
 {
+    Sample bs;
     vec3 wh = sample_visible_distribution ? sample_D(wi, sampler) : sample_D(sampler);
-    return glm::reflect(-wi, wh);
+    bs.wo = glm::reflect(-wi, wh);
+    bs.value = eval(wi,bs.wo) / pdf(wi, bs.wo);
+    return bs;
 }
 
 template <class MICROSURFACE>
