@@ -43,11 +43,14 @@ class RendererAsync : public Renderer {
 public:
     std::thread thr;
     bool need_reset;
+    std::atomic<bool> done;
+    bool start;
 
-    RendererAsync() { need_reset = false; }
+    RendererAsync() { need_reset = false; done = true; start = true; }
 
     ~RendererAsync()
     {
+
         try {
             if (thr.joinable()) {
                 thr.join();
@@ -61,19 +64,27 @@ public:
 
     bool render(Scene& scene)
     {
-        if (thr.joinable()) {
+        if (!done) {
             return false;
         } else {
+            done = false;
+            if (start)
+                start = false;
+            else
+                thr.join();
+
             if (need_reset) {
                 Renderer::reset();
                 need_reset = false;
             }
+            
             thr = std::thread(
                 [&](auto s) {
                     Renderer::render(s);
-                    thr.detach();
+                    done = true;
                 },
                 scene);
+            
             return true;
         }
     }

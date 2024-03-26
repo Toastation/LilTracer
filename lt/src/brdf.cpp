@@ -38,16 +38,18 @@ float Brdf::pdf(const vec3& wi, const vec3& wo)
     return square_to_cosine_hemisphere_pdf(wo); 
 }
 
-bool Brdf::emissive() 
-{ 
-    return false;
-}
-
 Spectrum Brdf::emission() 
 {
     return Spectrum(0.); 
 }
 
+/////////////////////
+// Emissive 
+///////////////////
+Spectrum Emissive::emission()
+{
+    return intensity;
+}
 
 /////////////////////
 // Diffuse 
@@ -99,36 +101,35 @@ template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh)
 {
     Float det_m = 1. / std::abs(scale.x * scale.y);
-    vec3 wh_l   = to_transformed_space(wh);
-    return ms.D(wh_l) * det_m * std::pow(wh_l.z / wh.z, 4.);
+    vec3 wh_u   = to_transformed_space(wh);
+    return ms.D(wh_u) * det_m * std::pow(wh_u.z / wh.z, 4.);
 }
 
 template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(const vec3& wh) 
 { 
     Float det_m = 1. / std::abs(scale.x * scale.y);
-    vec3 wh_l = to_transformed_space(wh);
-    return ms.pdf(wh_l) * det_m * std::pow(wh_l.z / wh.z, 3.);
+    vec3 wh_u = to_transformed_space(wh);
+    return ms.pdf(wh_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
 }
 
 template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh, const vec3& wi)
 {
     Float det_m = 1. / std::abs(scale.x * scale.y);
-    vec3 wh_l = to_transformed_space(wh);
-    vec3 wi_l = to_unit_space(wi);
-    return ms.D(wh_l,wi_l) * det_m * std::pow(wh_l.z / wh.z, 3.);
+    vec3 wh_u = to_transformed_space(wh);
+    vec3 wi_u = to_unit_space(wi);
+    return ms.D(wh_u,wi_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
 }
 
 template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(const vec3& wh, const vec3& wi) 
 {
     Float det_m = 1. / std::abs(scale.x * scale.y);
-    vec3 wh_l = to_transformed_space(wh);
-    vec3 wi_l = to_unit_space(wi);
-    return ms.pdf(wh_l, wi_l) * det_m * std::pow(wh_l.z / wh.z, 3.);
+    vec3 wh_u = to_transformed_space(wh);
+    vec3 wi_u = to_unit_space(wi);
+    return ms.pdf(wh_u, wi_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
 }
-
 
 template <class MICROSURFACE>
 vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(Sampler& sampler)
@@ -142,34 +143,42 @@ vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(const vec3& wi, Sampler&
     return to_unit_space(ms.sample_D(to_unit_space(wi),sampler));
 }
 
-
-template <class MICROSURFACE>
-Brdf::Sample ShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
-{
-    Sample bs;
-    vec3 wh = sample_visible_distribution ? sample_D(wi, sampler) : sample_D(sampler);
-    bs.wo = glm::reflect(-wi, wh);
-    bs.value = eval(wi,bs.wo) / pdf(wi, bs.wo);
-    return bs;
-}
-
 template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
 {
     vec3 wh = glm::normalize(wi + wo);
     Float pdf_wh_ = sample_visible_distribution ? pdf_wh(wh,wi) : pdf_wh(wh);
-    return pdf_wh_ / (4. * glm::clamp(glm::dot(wo, wh), 0.0001f, 0.9999f));
+    return pdf_wh_ / (4. * glm::clamp(glm::dot(wh, wi), 0.0001f, 0.9999f));
 }
 
+/////////////////////
+// RoughShapeInvariantMicrosurface<MICROSURFACE>
+///////////////////
+
 template <class MICROSURFACE>
-Spectrum ShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
+Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
 {
     vec3 wh = glm::normalize(wi + wo);
     Float d = D(wh);
     Float g = G1(wh,wi) * G1(wh,wo);
-    Spectrum f = Spectrum(1);
+    Spectrum f = fresnelConductor(glm::dot(wh,wi),eta,kappa);
     Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
     return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
+}
+
+
+template <class MICROSURFACE>
+Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
+{
+    Sample bs;
+    vec3 wh = sample_visible_distribution ? sample_D(wi, sampler) : sample_D(sampler);
+    bs.wo = glm::reflect(-wi, wh);
+    bs.value = eval(wi, bs.wo) / pdf(wi, bs.wo);
+
+    //Float g = sample_visible_distribution ? G1(wh, bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
+    //bs.value = F * e;
+
+    return bs;
 }
 
 
@@ -177,49 +186,49 @@ Spectrum ShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
 // SphereMicrosurface
 ///////////////////
 
-Float SphereMicrosurface::D(const vec3& wh) { 
+Float SphereMicrosurface::lambda(const vec3& wi_u)
+{
+    Float cos_sqr = glm::clamp(wi_u.z * wi_u.z, 0.0001f, 0.9999f);
+    Float tan_sqr = (1. - cos_sqr) / cos_sqr;
+    return (-1. + std::sqrt(1. + tan_sqr)) / 2.;
+}
+
+Float SphereMicrosurface::G1(const vec3& wh_u, const vec3& wi_u) {
+    return 1. / (1. + lambda(wi_u));
+}
+
+Float SphereMicrosurface::D(const vec3& wh_u) {
     return 1. / pi; 
 }
 
-Float SphereMicrosurface::pdf(const vec3& wh)
+Float SphereMicrosurface::pdf(const vec3& wh_u)
 {
-    return square_to_cosine_hemisphere_pdf(wh);
+    return square_to_cosine_hemisphere_pdf(wh_u);
 }
 vec3 SphereMicrosurface::sample_D(Sampler& sampler)
 {
     return square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
 }
 
-Float SphereMicrosurface::lambda(const vec3& wi)
+Float SphereMicrosurface::D(const vec3& wh_u, const vec3& wi_u)
 {
-    Float cos_sqr = glm::clamp(wi.z * wi.z, 0.0001f, 0.9999f);
-    Float tan_sqr = (1. - cos_sqr) / cos_sqr;
-    return (-1. + std::sqrt(1. + tan_sqr)) / 2.;
+    return G1(wh_u, wi_u) * glm::clamp(glm::dot(wh_u, wi_u), 0.f, 1.f) / (wi_u.z * pi);
 }
 
-Float SphereMicrosurface::G1(const vec3& wh, const vec3& wi) {
-    return 1. / (1. + lambda(wi));
-}
-
-Float SphereMicrosurface::D(const vec3& wh, const vec3& wi) 
+Float SphereMicrosurface::pdf(const vec3& wh_u, const vec3& wi_u)
 {
-    return G1(wh, wi) * glm::clamp(glm::dot(wi, wh), 0.f, 1.f) / (wi.z * pi);
-}
-
-Float SphereMicrosurface::pdf(const vec3& wh, const vec3& wi)
-{
-    return D(wh, wi);
+    return D(wh_u, wi_u);
 }
 
 // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
-vec3 SphereMicrosurface::sample_D(const vec3& wi, Sampler& sampler)
+vec3 SphereMicrosurface::sample_D(const vec3& wi_u, Sampler& sampler)
 {
     float phi = 2. * pi * sampler.next_float();
-    float z = std::fma(1. - sampler.next_float(), 1 + wi.z, -wi.z);
+    float z = std::fma(1. - sampler.next_float(), 1 + wi_u.z, -wi_u.z);
     float sin_theta = std::sqrt(std::clamp(1. - z * z, 0., 1.));
     float x = sin_theta * std::cos(phi);
     float y = sin_theta * std::sin(phi);
-    return glm::normalize(wi + vec3(x, y, z));
+    return glm::normalize(wi_u + vec3(x, y, z));
 }
 
 /////////////////////
@@ -233,15 +242,15 @@ vec3 SphereMicrosurface::sample_D(const vec3& wi, Sampler& sampler)
 // BeckmannMicrosurface
 ///////////////////
 
-Float BeckmannMicrosurface::D(const vec3& wh) {
-    Float cos_theta_h_sqr = wh.z * wh.z;
+Float BeckmannMicrosurface::D(const vec3& wh_u) {
+    Float cos_theta_h_sqr = wh_u.z * wh_u.z;
     Float tan_theta_h_sqr = (1 - cos_theta_h_sqr) / cos_theta_h_sqr;
     return std::exp(-tan_theta_h_sqr) / (cos_theta_h_sqr* cos_theta_h_sqr * pi);
 }
 
-Float BeckmannMicrosurface::pdf(const vec3& wh)
+Float BeckmannMicrosurface::pdf(const vec3& wh_u)
 {
-    return D(wh) * wh.z;
+    return D(wh_u) * wh_u.z;
 }
 vec3 BeckmannMicrosurface::sample_D(Sampler& sampler)
 {
@@ -251,13 +260,13 @@ vec3 BeckmannMicrosurface::sample_D(Sampler& sampler)
     Float phi = sampler.next_float() * 2 * pi;
     Float cos_theta = 1 / std::sqrt(1 + tan_theta_sqr);
     Float sin_theta = std::sqrt(std::max((Float)0, 1 - cos_theta * cos_theta));
-    vec3 wh = vec3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
-    return wh;
+    vec3 wh_u = vec3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
+    return wh_u;
 }
 
-Float BeckmannMicrosurface::lambda(const vec3& wi)
+Float BeckmannMicrosurface::lambda(const vec3& wi_u)
 {
-    Float tan_theta_i_sqr = (1 - wi.z * wi.z) / (wi.z * wi.z);
+    Float tan_theta_i_sqr = (1 - wi_u.z * wi_u.z) / (wi_u.z * wi_u.z);
     Float abs_tan_theta = std::abs(std::sqrt(tan_theta_i_sqr));
     if (std::isinf(abs_tan_theta)) return 0.;
 
@@ -267,21 +276,21 @@ Float BeckmannMicrosurface::lambda(const vec3& wi)
     return (1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a);
 }
 
-Float BeckmannMicrosurface::G1(const vec3& wh, const vec3& wi) {
-    return 1. / (1. + lambda(wi));
+Float BeckmannMicrosurface::G1(const vec3& wh_u, const vec3& wi_u) {
+    return 1. / (1. + lambda(wi_u));
 }
 
-Float BeckmannMicrosurface::D(const vec3& wh, const vec3& wi)
+Float BeckmannMicrosurface::D(const vec3& wh_u, const vec3& wi_u)
 {
-    return D(wh);
+    return D(wh_u);
 }
 
-Float BeckmannMicrosurface::pdf(const vec3& wh, const vec3& wi)
+Float BeckmannMicrosurface::pdf(const vec3& wh_u, const vec3& wi_u)
 {
-    return pdf(wh);
+    return pdf(wh_u);
 }
 
-vec3 BeckmannMicrosurface::sample_D(const vec3& wi, Sampler& sampler)
+vec3 BeckmannMicrosurface::sample_D(const vec3& wi_u, Sampler& sampler)
 {
     return sample_D(sampler);
 }
@@ -292,5 +301,7 @@ vec3 BeckmannMicrosurface::sample_D(const vec3& wi, Sampler& sampler)
 ///////////////////
 
  // RoughBeckmann = ShapeInvariantMicrosurface<BeckmannMicrosurface>
+
+
 
 } // namespace LT_NAMESPACE

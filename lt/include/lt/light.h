@@ -24,7 +24,6 @@ namespace LT_NAMESPACE {
             vec3 emission;
             Float pdf;
             Float expected_distance_to_intersection;
-            bool has_geometry;
         };
 
         /**
@@ -39,9 +38,11 @@ namespace LT_NAMESPACE {
         virtual Sample sample(const SurfaceInteraction& si, Sampler& sampler) = 0;
 
         virtual Spectrum eval(const vec3& direction) = 0;
+        virtual Float pdf(const vec3& p, const vec3& ld) = 0;
 
-        virtual bool has_geometry();
+        bool has_geometry;
         virtual int geometry_id();
+        bool is_dirac;
 };
 
 /**
@@ -56,6 +57,8 @@ public:
     DirectionnalLight()
         : Light("DirectionnalLight")
     {
+        has_geometry = false;
+        is_dirac = true;
         link_params();
     }
 
@@ -66,6 +69,7 @@ public:
     Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
+    Float pdf(const vec3& p, const vec3& ld);
 
     /**
      * @brief Initialize the directional light.
@@ -95,12 +99,15 @@ public:
     EnvironmentLight()
         : Light("EnvironmentLight")
     {
+        has_geometry = false;
+        is_dirac = false;
         link_params();
     }
 
     Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
+    Float pdf(const vec3& p, const vec3& ld);
 
     void compute_density();
 
@@ -131,6 +138,9 @@ public:
     SphereLight()
         : Light("SphereLight")
     {
+
+        has_geometry = true;
+        is_dirac = false;
         link_params();
     }
 
@@ -139,8 +149,8 @@ public:
     Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
-
-    bool has_geometry();
+    Float pdf(const vec3& p, const vec3& ld);
+    
     int geometry_id();
 
     std::shared_ptr<Sphere> sphere;

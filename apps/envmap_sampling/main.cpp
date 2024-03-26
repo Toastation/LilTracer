@@ -89,9 +89,8 @@ void AppInit(AppData& app_data) {
     app_data.x.resize(app_data.nsample);
     app_data.y.resize(app_data.nsample);
     for (int i = 0; i < app_data.nsample; i++) {
-        lt::vec3 emission;
-        Float pdf;
-        app_data.envmap->sample(lt::SurfaceInteraction(), app_data.samples[i], emission, pdf, app_data.sampler);
+        lt::Light::Sample env_sample = app_data.envmap->sample(lt::SurfaceInteraction(), app_data.sampler);
+        app_data.samples[i] = env_sample.direction;
         Float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
         phi = phi > 0. ? phi : 2 * lt::pi + phi;
         app_data.x[i] = phi / (2. * lt::pi) * (float)app_data.envmap->envmap.w;

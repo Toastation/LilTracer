@@ -12,12 +12,15 @@ Factory<Light>::CreatorRegistry& Factory<Light>::registry()
     return registry;
 }
 
+int Light::geometry_id() 
+{
+    return -1;
+}
 
-bool Light::has_geometry() { return false; }
-int Light::geometry_id() { return -1; }
-
-
-void DirectionnalLight::init() { dir = glm::normalize(dir); }
+void DirectionnalLight::init()
+{ 
+    dir = glm::normalize(dir);
+}
 
 Light::Sample DirectionnalLight::sample(const SurfaceInteraction& si, Sampler& sampler)
 {
@@ -26,12 +29,20 @@ Light::Sample DirectionnalLight::sample(const SurfaceInteraction& si, Sampler& s
     s.emission = Spectrum(intensity);
     s.pdf = 1;
     s.expected_distance_to_intersection = std::numeric_limits<Float>::infinity();
-    s.has_geometry = false;
     return s;
 
 }
 
-Spectrum DirectionnalLight::eval(const vec3& direction) { return Spectrum(intensity); }
+Spectrum DirectionnalLight::eval(const vec3& direction)
+{
+    return Spectrum(intensity);
+}
+
+
+Float DirectionnalLight::pdf(const vec3& p, const vec3& ld)
+{
+    return 0.;
+}
 
 int EnvironmentLight::binary_search(const float& u) {
 
@@ -110,7 +121,6 @@ Light::Sample EnvironmentLight::sample(const SurfaceInteraction& si, Sampler& sa
     s.direction = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 #endif
     s.emission = eval(s.direction) * solid_angle;
-    s.has_geometry = false;
     s.expected_distance_to_intersection = std::numeric_limits<Float>::infinity();
 
     return s;
@@ -124,6 +134,16 @@ Spectrum EnvironmentLight::eval(const vec3& direction)
     Float u = phi / (2 * pi);
     Float v = glm::acos(direction.y) / pi;
     return envmap.eval(u, v) * intensity;
+}
+
+Float EnvironmentLight::pdf(const vec3& p, const vec3& ld)
+{
+    Float phi = glm::atan(ld.z, ld.x);
+    phi += pi;
+    //phi = (phi < 0. ? 2 * pi + phi : phi);
+    Float u = phi / (2 * pi);
+    Float v = glm::acos(ld.y) / pi;
+    return density.eval(u, v);
 }
 
 void EnvironmentLight::compute_density()
@@ -159,6 +179,7 @@ void EnvironmentLight::compute_density()
         cumulative_density.data[n] /= cumulative_density.data[envmap.w * envmap.h - 1];
     }
 }
+
 
 
 
@@ -221,14 +242,20 @@ Light::Sample SphereLight::sample(const SurfaceInteraction& si, Sampler& sampler
     s.expected_distance_to_intersection = distance * cos_theta - std::sqrt(rad_sqr - dist_sqr * (1 - cos_theta_sqr));
 
 #endif
-    s.has_geometry = true;
     s.emission = sphere->brdf->emission();
     return s;
 }
 
 Spectrum SphereLight::eval(const vec3& direction) { return sphere->brdf->emission(); }
 
-bool SphereLight::has_geometry() { return true; }
+Float SphereLight::pdf(const vec3& p, const vec3& ld)
+{
+    Float dist = (sphere->pos - p).length();
+    Float cos_theta_max = std::sqrt(std::max(dist * dist - sphere->rad * sphere->rad, 0.0f)) / dist;
+    Float solid_angle = 2. * pi * (1 - cos_theta_max);
+    return 1. / solid_angle;
+}
+
 int SphereLight::geometry_id() { return sphere->rtc_id; }
 
  

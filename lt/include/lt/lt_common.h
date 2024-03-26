@@ -66,6 +66,15 @@ inline Float square_to_uniform_hemisphere_pdf() { return 1. / (2. * pi); }
 
 inline vec3 square_to_cosine_hemisphere(Float u1, Float u2)
 {
+#if 0
+    Float cos_theta = std::sqrt(u1);
+    Float sin_theta = std::sqrt(glm::clamp(1.f - cos_theta * cos_theta,0.f,0.99999f));
+    Float phi = 2. * pi * u2;
+    Float x = sin_theta * std::cos(phi);
+    Float y = sin_theta * std::sin(phi);
+    return vec3(x, y, cos_theta);
+#endif
+#if 1
     Float r = std::sqrt(u1);
     Float theta = 2. * pi * u2;
     Float dx = r * std::cos(theta);
@@ -74,6 +83,7 @@ inline vec3 square_to_cosine_hemisphere(Float u1, Float u2)
     if (z != z)
         std::cout << "ff" << std::endl;
     return vec3(dx, dy, z);
+#endif
 }
 
 inline Float square_to_cosine_hemisphere_pdf(const vec3& w)
@@ -92,6 +102,30 @@ inline void orthonormal_basis(const vec3& n, vec3& t, vec3& b)
         t = glm::normalize(vec3(1.f - n.x * n.x * c1, c2, -n.x));
         b = glm::normalize(vec3(c2, 1.f - n.y * n.y * c1, -n.y));
     }
+}
+
+inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, const Spectrum& k) {
+    /* Modified from "Optics" by K.D. Moeller, University Science Books, 1988 */
+
+    Float cosThetaI2 = cosThetaI * cosThetaI,
+        sinThetaI2 = 1 - cosThetaI2,
+        sinThetaI4 = sinThetaI2 * sinThetaI2;
+
+    Spectrum temp1 = eta * eta - k * k - sinThetaI2;
+    Spectrum a2pb2 = glm::sqrt(glm::max(temp1 * temp1 + 4.f * k * k * eta * eta, 0.00001f));
+    Spectrum a = glm::sqrt(glm::max(0.5f * (a2pb2 + temp1), 0.00001f));
+
+    Spectrum term1 = a2pb2 + cosThetaI2;
+    Spectrum term2 = 2.f * a * cosThetaI;
+
+    Spectrum Rs2 = (term1 - term2) / (term1 + term2);
+
+    Spectrum term3 = a2pb2 * cosThetaI2 + sinThetaI4;
+    Spectrum term4 = term2 * sinThetaI2;
+
+    Spectrum Rp2 = Rs2 * (term3 - term4) / (term3 + term4);
+
+    return 0.5f * (Rp2 + Rs2);
 }
 
 } // namespace LT_NAMESPACE

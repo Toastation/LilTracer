@@ -111,15 +111,18 @@ void AppInit(AppData& app_data) {
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
 
-    app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(256, 64);
+    int res_theta_sampling = 256;
+    int res_phi_sampling = 4 * res_theta_sampling;
+
+    app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling.sensor = app_data.s_brdf_sampling;
     app_data.rs_brdf_sampling.initialize();
 
-    app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(256, 64);
+    app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling_pdf.sensor = app_data.s_brdf_sampling_pdf;
     app_data.rs_brdf_sampling_pdf.initialize();
 
-    app_data.s_brdf_sampling_diff = std::make_shared<lt::Sensor>(256, 64);
+    app_data.s_brdf_sampling_diff = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling_diff.sensor = app_data.s_brdf_sampling_diff;
     app_data.rs_brdf_sampling_diff.initialize();
 
@@ -243,6 +246,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     break;
                 case lt::Params::Type::VEC3:
                     NEED_RESET(ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
+                    break;
+                case lt::Params::Type::IOR:
+                    NEED_RESET(ImGui::DragFloat3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i],0.01,0.5,10.));
                     break;
                 case lt::Params::Type::SH:
                     if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
@@ -434,32 +440,50 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
 
                                         
-                    std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, app_data.s_brdf_sampling->h);
-                    std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, app_data.s_brdf_sampling->w);
-
                     for (int i = 0; i < 10000; i++) {
                         lt::vec3 wo = app_data.brdfs[app_data.current_brdf_idx]->sample(wi, app_data.sampler).wo;
                         float phi = std::atan2(wo.y, wo.x);
                         phi = phi < 0 ? 2 * lt::pi + phi : phi;
                         float x = phi / (2. * lt::pi) * (float)app_data.s_brdf_sampling->w;
                         float y = std::acos(wo.z) / (0.5 * lt::pi) * (float)app_data.s_brdf_sampling->h;
-                        if( y < app_data.s_brdf_sampling->h )
-                            app_data.s_brdf_sampling->add(int(x),int(y),lt::Spectrum(1));
-                    }
+                        if (y < app_data.s_brdf_sampling->h)
+                            app_data.s_brdf_sampling->add(int(x), int(y), lt::Spectrum(1));
+                        else
+                            app_data.s_brdf_sampling->sum_counts++;
+                    } 
                     
-
-                    for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
-                        for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
-                            float jw = 2. * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->w;
-                            float jh = 0.5 * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->h;
-                            //float jw = 0.f;
-                            //float jh = 0.f;
-
-                            lt::vec3 wo = lt::polar_to_card(th[y] + jh, ph[x] + jw);
-                            app_data.s_brdf_sampling_pdf->add(x,y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
-                            app_data.s_brdf_sampling_diff->set(x,y,glm::abs(app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
+                    
+                    //std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, app_data.s_brdf_sampling->h);
+                    //std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, app_data.s_brdf_sampling->w);
+                    //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
+                    //    for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
+                    //        float jw = 2. * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->w;
+                    //        float jh = 0.5 * lt::pi * (app_data.sampler.next_float() - 0.5) / (float)app_data.s_brdf_sampling_pdf->h;
+                    //        
+                    //        lt::vec3 wo = lt::polar_to_card(th[y] + jh, ph[x] + jw);
+                    //        app_data.s_brdf_sampling_pdf->add(x,y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
+                    //        app_data.s_brdf_sampling_diff->set(x,y,glm::abs(app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
+                    //    }
+                    //}
+                    
+                    
+                    for (int i = 0; i < 10000; i++) {
+                        lt::vec3 wo = lt::square_to_cosine_hemisphere(app_data.sampler.next_float(), app_data.sampler.next_float());
+                        float phi = std::atan2(wo.y, wo.x);
+                        phi = phi < 0 ? 2 * lt::pi + phi : phi;
+                        int x = int(phi / (2. * lt::pi) * (float)app_data.s_brdf_sampling->w);
+                        int y = int(std::acos(wo.z) / (0.5 * lt::pi) * (float)app_data.s_brdf_sampling->h);
+                           
+                        if (y < app_data.s_brdf_sampling->h) {
+                            app_data.s_brdf_sampling_pdf->add(x, y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
+                            app_data.s_brdf_sampling_diff->set(x, y, (app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
+                        }
+                        else {
+                            app_data.s_brdf_sampling_pdf->sum_counts++;
+                            app_data.s_brdf_sampling_diff->sum_counts++;
                         }
                     }
+
 
                     app_data.rs_brdf_sampling.update_data();
                     app_data.rs_brdf_sampling_pdf.update_data();
@@ -478,6 +502,31 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     if (ImPlot::BeginPlot("##sample_diff", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_diff.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_diff.sensor->w, app_data.rs_brdf_sampling_diff.sensor->h));
                         ImPlot::EndPlot();
+                    }
+
+                    if (ImGui::Button("Export EXR")) {
+                        lt::save_sensor_exr(*app_data.s_brdf_sampling, "brdf_sampling.exr");
+                        lt::save_sensor_exr(*app_data.s_brdf_sampling_pdf, "brdf_sampling_pdf.exr");
+                        lt::save_sensor_exr(*app_data.s_brdf_sampling_diff, "brdf_sampling_diff.exr");
+
+                        //float dtheta = 0.5 * lt::pi / app_data.s_brdf_sampling->h;
+                        //float dphi = 2. * lt::pi / app_data.s_brdf_sampling->w;
+                        //float sum_1 = 0.;
+                        //float sum_2 = 0.;
+                        //float sum_3 = 0.;
+                        //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
+                        //    for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
+                        //        lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
+                        //        float theta = 0.5 * lt::pi * (float(y) + 0.5) / app_data.s_brdf_sampling_pdf->h;
+                        //        sum_1 += app_data.s_brdf_sampling->get(x, y).x * std::sin(theta) * dtheta * dphi;
+                        //        sum_2 += app_data.s_brdf_sampling_pdf->get(x, y).x * std::sin(theta) * dtheta * dphi;
+                        //        sum_3 += lt::square_to_cosine_hemisphere_pdf(wo) * std::sin(theta) * dtheta * dphi;
+                        //    }
+                        //}
+
+                        //std::cout << sum_1 << std::endl;
+                        //std::cout << sum_2 << std::endl;
+                        //std::cout << sum_3 << std::endl;
                     }
 
                     ImGui::EndTabItem();

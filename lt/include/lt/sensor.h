@@ -106,8 +106,8 @@ public:
 
     virtual void set_value(const uint32_t& idx, const uint32_t& x){
         value[idx] = acculumator[idx] / (Float)count[idx];
-        //  Gamma correction
-        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+        // Gamma correction
+        // value[idx] = glm::pow(value[idx], Spectrum(0.4545));
 
         assert(value[idx] == value[idx]);
     }
@@ -146,8 +146,8 @@ public:
     void set_value(const uint32_t& idx, const uint32_t& y) {
         Float norm = sum_counts * solid_angle[y];
         value[idx] = acculumator[idx] / norm;
-        //  Gamma correction
-        value[idx] = glm::pow(value[idx], Spectrum(0.4545));
+        // Gamma correction
+        // value[idx] = glm::pow(value[idx], Spectrum(0.4545));
     }
 
     std::vector<Float> solid_angle; /**< Vector representing the u-coordinates of the sensor pixels. */

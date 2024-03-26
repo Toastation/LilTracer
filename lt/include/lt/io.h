@@ -55,6 +55,18 @@ static void json_set_vec3(const json& j, vec3* ptr)
 }
 
 /**
+ * @brief Set a ior value from JSON.
+ * @param j The JSON value.
+ * @param ptr Pointer to the ior variable.
+ */
+static void json_set_ior(const json& j, Spectrum* ptr)
+{
+    (*ptr)[0] = j[0];
+    (*ptr)[1] = j[1];
+    (*ptr)[2] = j[2];
+}
+
+/**
  * @brief Set a path value from JSON.
  * @param j The JSON value.
  * @param ptr Pointer to the string variable.
@@ -108,6 +120,9 @@ static void set_params(const json& j, const Params& params, const std::string& d
                 break;
             case Params::Type::VEC3:
                 json_set_vec3(j[params.names[i]], (vec3*)params.ptrs[i]);
+                break;
+            case Params::Type::IOR:
+                json_set_ior(j[params.names[i]], (Spectrum*)params.ptrs[i]);
                 break;
             case Params::Type::PATH:
                 json_set_path(j[params.names[i]], (std::string*)params.ptrs[i], dir);
@@ -282,7 +297,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             set_params(json_geometry, geometry->params, dir, brdf_ref);
             geometry->init();
 
-            if (geometry->brdf->emissive() && geometry->type == "Sphere") {
+            if (geometry->brdf->emissive && geometry->type == "Sphere") {
                 std::shared_ptr<SphereLight> sphere_light = std::make_shared<SphereLight>();
                 sphere_light->sphere = std::dynamic_pointer_cast<Sphere>(geometry);
                 sphere_light->init();

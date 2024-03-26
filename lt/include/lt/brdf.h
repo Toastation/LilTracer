@@ -26,12 +26,21 @@ public:
         Spectrum value; // brdf / pdf
     };
 
+    enum class flags
+    {
+        rough = 1 << 0,
+        specular = 1 << 1
+    };
+
     /**
      * @brief Constructor.
      * @param type The type of the BRDF.
      */
     Brdf(const std::string& type)
-        : Serializable(type) {};
+        : Serializable(type) 
+    {
+        emissive = false;
+    };
 
     /**
      * @brief Evaluates the BRDF.
@@ -56,7 +65,7 @@ public:
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
 
-    virtual bool emissive();
+    bool emissive;
     virtual Spectrum emission();
 };
 
@@ -67,11 +76,11 @@ public:
     Emissive()
         : Brdf("Emissive")
     {
+        emissive = true;
         link_params();
     }
 
-    bool emissive() { return true; }
-    Spectrum emission() { return intensity; }
+    Spectrum emission();
 
 protected:
     void link_params()
@@ -160,9 +169,9 @@ public:
 
     vec3 sample_D(Sampler& sampler);
     vec3 sample_D(const vec3& wi, Sampler& sampler);
-    Sample sample(const vec3& wi, Sampler& sampler);
+    //Sample sample(const vec3& wi, Sampler& sampler);
 
-    Spectrum eval(vec3 wi, vec3 wo);
+    //virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
 
     MICROSURFACE ms;
     bool sample_visible_distribution;
@@ -170,31 +179,50 @@ public:
 
 class SphereMicrosurface {
 public:
-    Float D(const vec3& wh);
-    Float D(const vec3& wh, const vec3& wi);
+    Float D(const vec3& wh_u);
+    Float D(const vec3& wh_u, const vec3& wi_u);
      
-    Float pdf(const vec3& wh);
-    Float pdf(const vec3& wh, const vec3& wi);
+    Float pdf(const vec3& wh_u);
+    Float pdf(const vec3& wh_u, const vec3& wi_u);
   
     vec3 sample_D(Sampler& sampler);
     // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
-    vec3 sample_D(const vec3& wi, Sampler& sampler);
+    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
     
-    Float lambda(const vec3& wi);
-    Float G1(const vec3& wh, const vec3& wi);
+    Float lambda(const vec3& wi_u);
+    Float G1(const vec3& wh_u, const vec3& wi_u);
 };
 
-class RoughGGX : public ShapeInvariantMicrosurface<SphereMicrosurface> {
+template <class MICROSURFACE>
+class RoughShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<SphereMicrosurface> {
+public:
+    RoughShapeInvariantMicrosurface(const std::string& type, const Float& scale_x,
+        const Float& scale_y)
+        : ShapeInvariantMicrosurface<SphereMicrosurface>(type, scale_x, scale_y)
+    {
+        eta = Spectrum(1.);
+        kappa = Spectrum(10000.);
+    }
+
+    Spectrum eval(vec3 wi, vec3 wo);
+    Sample sample(const vec3& wi, Sampler& sampler);
+
+    Spectrum eta;
+    Spectrum kappa;
+};
+
+
+class RoughGGX : public RoughShapeInvariantMicrosurface<SphereMicrosurface> {
 public:
     RoughGGX()
-        : ShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", 0.1,
+        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", 0.1,
             0.1)
     {
         link_params();
     }
 
     RoughGGX(const Float& scale_x, const Float& scale_y)
-        : ShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX",
+        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX",
             scale_x, scale_y)
     {
         link_params();
@@ -205,6 +233,8 @@ protected:
     {
         params.add("rough_x", Params::Type::FLOAT, &scale[0]);
         params.add("rough_y", Params::Type::FLOAT, &scale[1]);
+        params.add("eta", Params::Type::IOR, &eta);
+        params.add("kappa", Params::Type::IOR, &kappa);
         params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
     }
 };
@@ -212,33 +242,30 @@ protected:
 
 class BeckmannMicrosurface {
 public:
-    Float D(const vec3& wh);
-    Float D(const vec3& wh, const vec3& wi);
+    Float D(const vec3& wh_u);
+    Float D(const vec3& wh_u, const vec3& wi_u);
 
-    Float pdf(const vec3& wh);
-    Float pdf(const vec3& wh, const vec3& wi);
+    Float pdf(const vec3& wh_u);
+    Float pdf(const vec3& wh_u, const vec3& wi_u);
 
     vec3 sample_D(Sampler& sampler);
-    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
-    vec3 sample_D(const vec3& wi, Sampler& sampler);
+    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
 
-    Float lambda(const vec3& wi);
-    Float G1(const vec3& wh, const vec3& wi);
+    Float lambda(const vec3& wi_u);
+    Float G1(const vec3& wh_u, const vec3& wi_u);
 };
 
 
-class RoughBeckmann : public ShapeInvariantMicrosurface<BeckmannMicrosurface> {
+class RoughBeckmann : public RoughShapeInvariantMicrosurface<BeckmannMicrosurface> {
 public:
     RoughBeckmann()
-        : ShapeInvariantMicrosurface<BeckmannMicrosurface>("RoughBeckmann", 0.1,
-            0.1)
+        : RoughShapeInvariantMicrosurface<BeckmannMicrosurface>("RoughBeckmann", 0.1, 0.1)
     {
         link_params();
     }
 
     RoughBeckmann(const Float& scale_x, const Float& scale_y)
-        : ShapeInvariantMicrosurface<BeckmannMicrosurface>("RoughBeckmann",
-            scale_x, scale_y)
+        : RoughShapeInvariantMicrosurface<BeckmannMicrosurface>("RoughBeckmann", scale_x, scale_y)
     {
         link_params();
     }
@@ -248,6 +275,8 @@ protected:
     {
         params.add("rough_x", Params::Type::FLOAT, &scale[0]);
         params.add("rough_y", Params::Type::FLOAT, &scale[1]);
+        params.add("eta", Params::Type::IOR, &eta);
+        params.add("kappa", Params::Type::IOR, &kappa);
     }
 };
 

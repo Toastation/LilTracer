@@ -21,6 +21,7 @@ struct Params {
         INT, /**< Int type parameter. */
         VEC3, /**< Vector3 type parameter. */
         MAT4, /**< Matrix 4x4 type parameter . */
+        IOR, /**< Eta and Kappa parameters. */
         SH, /**< Spherical Harmonics type parameter. */
         PATH, /**< Path type parameter. */
         BRDF, /**< BRDF type parameter. */

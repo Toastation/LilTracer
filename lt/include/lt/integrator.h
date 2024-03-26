@@ -20,6 +20,10 @@
 
 namespace LT_NAMESPACE {
 
+inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
+    return (pdf_1 * pdf_1) / (pdf_1 * pdf_1 + pdf_2 * pdf_2);
+}
+
 class Integrator : public Serializable {
 public:
     /**
@@ -182,20 +186,49 @@ public:
         const std::shared_ptr<Light>& light, Scene& scene,
         Sampler& sampler)
     {
+        vec3 contrib = vec3(0.);
+        
         si.pos -= r.d * 0.00001f;
 
-        Light::Sample light_sample = light->sample(si, sampler);
+        Light::Sample ls = light->sample(si, sampler);
 
-        vec3 wo = si.to_local(-light_sample.direction);
+        vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 
-        Ray rs(si.pos, -light_sample.direction);
+        Ray rs(si.pos, -ls.direction);
 
-        if (!scene.shadow(rs, light_sample.expected_distance_to_intersection-0.00001)) {
-            return si.brdf->eval(wi, wo) * light_sample.emission / light_sample.pdf;
+        if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
+            vec3 brdf_contrib = si.brdf->eval(wi, wo);
+            #if !defined(USE_MIS)
+            if (light->is_dirac) {
+                contrib += brdf_contrib * ls.emission / ls.pdf;
+            }
+            else {
+                Float brdf_pdf = si.brdf->pdf(wi, wo);
+                Float weight = power_heuristic(ls.pdf, brdf_pdf);
+                contrib += weight * brdf_contrib * ls.emission / ls.pdf;
+            }
+            #else
+            contrib += brdf_contrib * ls.emission / ls.pdf;
+            #endif
         }
 
-        return Spectrum(0.);
+        #if !defined(USE_MIS)
+        if (!light->is_dirac) {
+            Brdf::Sample bs = si.brdf->sample(wi, sampler);
+            Float weight = 1;
+
+            //if (sample_not_specular) {
+                Float light_pdf = light->pdf(si.pos,si.to_world(bs.wo));
+                weight = power_heuristic(si.brdf->pdf(wi,bs.wo), light_pdf);
+            //}
+
+                vec3 emission = vec3(0.);
+            contrib += bs.value * emission * weight;
+        }
+        #endif
+
+        return contrib;
     }
 
     uint32_t n_sample;
@@ -224,7 +257,7 @@ public:
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
-            if (depth >= max_depth || si.brdf->emissive())
+            if (depth >= max_depth || si.brdf->emissive)
                 return si.brdf->emission();
 
             // Compute BRDF  contrib
@@ -297,7 +330,7 @@ public:
                 return render_pixel(r, scene, sampler);
             }
 
-            if (si.brdf->emissive())
+            if (si.brdf->emissive)
                 return si.brdf->emission();
 
             s += uniform_sample_one_light(r, si, scene, sampler);
@@ -327,21 +360,27 @@ public:
 
     Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler)
     {
-        Spectrum attenuation(1.);
+        Spectrum throughput(1.);
         Spectrum s(0.);
 
         for (int d = 0; d < max_depth; d++) {
+            
             SurfaceInteraction si;
             if (scene.intersect(r, si)) {
+
+
                 if (!si.brdf) {
                     r = Ray(si.pos + r.d * 0.00001f, r.d);
                     d--;
                     continue;
                 }
 
-
+                if (d == 0 /* || specularBounce*/) {
+                    s += throughput * si.brdf->emission();
+                }
+                
                 // Compute Light contrib
-                s += attenuation * uniform_sample_one_light(r, si, scene, sampler);
+                s += throughput * uniform_sample_one_light(r, si, scene, sampler);
 
                 // Compute BRDF  contrib
                 vec3 wi = si.to_local(-r.d);
@@ -353,17 +392,18 @@ public:
                 #if !defined(SAMPLE_OPTIM)
                 Float wo_pdf = si.brdf->pdf(wi, bs.wo);
                 Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo);
-                attenuation *= brdf_cos_weighted / wo_pdf;
+                throughput *= brdf_cos_weighted / wo_pdf;
                 #else
-                attenuation *= bs.value;
+                throughput *= bs.value;
                 #endif
 
                 // offset si.pos for next bounce
                 vec3 p = si.pos - r.d * 0.00001f;
                 r = Ray(p, si.to_world(bs.wo));
+
             } else {
                 for (const auto& light : scene.infinite_lights)
-                    s += attenuation * light->eval(r.d);
+                    s += throughput * light->eval(r.d);
 
                 break;
             }
