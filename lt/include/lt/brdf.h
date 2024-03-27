@@ -158,6 +158,7 @@ public:
     vec3 to_transformed_space(const vec3& wi);
     
     Float G1(const vec3& wh, const vec3& wi);
+    Float G2(const vec3& wh, const vec3& wi, const vec3& wo);
 
     Float D(const vec3& wh);
     Float pdf_wh(const vec3& wh);
@@ -191,6 +192,7 @@ public:
     
     Float lambda(const vec3& wi_u);
     Float G1(const vec3& wh_u, const vec3& wi_u);
+    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
 };
 
 template <class MICROSURFACE>
@@ -253,6 +255,7 @@ public:
 
     Float lambda(const vec3& wi_u);
     Float G1(const vec3& wh_u, const vec3& wi_u);
+    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
 };
 
 

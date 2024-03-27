@@ -7,8 +7,8 @@
 #include <GLFW/glfw3.h>
 
 #include <imgui.h>
-#include <imgui_impl_opengl3.h>
 #include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <implot.h>
 
 
@@ -22,9 +22,17 @@ static bool need_reset;
 #define NEED_RESET(x) if(x){ need_reset = true; }
 
 struct RenderSensor {
-    GLuint spec_id;
     std::shared_ptr<lt::Sensor> sensor = nullptr;
     bool initialized = false;
+
+    // OpenGL stuff
+    GLuint sensor_id;
+    GLuint render_id;
+    GLuint render_fb_id;
+    //GLuint render_rb_id;
+    GLuint quadVAO, quadVBO;
+    GLuint shader_id;
+
 
 
     bool update_data() {
@@ -32,31 +40,136 @@ struct RenderSensor {
         if (!initialized) {
             return false;
         }
-
-
-        glBindTexture(GL_TEXTURE_2D, spec_id);
+        // Push sensor data in opengl sensor texture
+        glBindTexture(GL_TEXTURE_2D, sensor_id);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, sensor->w, sensor->h, 0, GL_RGB, GL_FLOAT, sensor->value.data());
+
+        // Process sensor
+        // Apply tonemapping
+
+        glBindFramebuffer(GL_FRAMEBUFFER, render_fb_id);
+        glViewport(0, 0, sensor->w, sensor->h);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT); // we're not using the stencil buffer now
+        glDisable(GL_DEPTH_TEST);
+        
+        glUseProgram(shader_id);
+        glBindVertexArray(quadVAO);
+        glDisable(GL_DEPTH_TEST);
+        glBindTexture(GL_TEXTURE_2D, sensor_id);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         return true;
     }
 
     bool initialize()
     {
-
-        glGenTextures(1, &spec_id);
-        glBindTexture(GL_TEXTURE_2D, spec_id);
-
+        // Setup sensor OpenGL texture
+        glGenTextures(1, &sensor_id);
+        glBindTexture(GL_TEXTURE_2D, sensor_id);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+
+        // Setup framebuffer for post process
+        glGenFramebuffers(1, &render_fb_id);
+        glBindFramebuffer(GL_FRAMEBUFFER, render_fb_id);
+
+        glGenTextures(1, &render_id);
+        glBindTexture(GL_TEXTURE_2D, render_id);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sensor->w, sensor->h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, render_id, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+        };
+
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+
+
+
+        const char* vShaderCode = " #version 330 core\n"
+            "layout(location = 0) in vec2 aPos;\n"
+            "layout(location = 1) in vec2 aTexCoords;\n"
+            "out vec2 TexCoords;\n"
+            "void main()\n"
         
+            "{\n"
+            "    TexCoords = aTexCoords;\n"
+            "    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
+            "}";
+
+        const char* fShaderCode = "#version 330 core\n"
+            "out vec4 FragColor;\n"
+            "in vec2 TexCoords;\n"
+            "uniform sampler2D screenTexture;\n"
+            "void main()\n"
+            "{\n"
+            "    vec3 col = texture(screenTexture, TexCoords).rgb;\n"
+            "    FragColor = vec4(pow(col,vec3(0.4545)), 1.0);\n"
+            "}";
+        
+        unsigned int vertex, fragment;
+        // vertex shader
+        vertex = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertex, 1, &vShaderCode, NULL);
+        glCompileShader(vertex);
+        
+        // fragment Shader
+        fragment = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragment, 1, &fShaderCode, NULL);
+        glCompileShader(fragment);
+        
+        // shader Program
+        shader_id = glCreateProgram();
+        glAttachShader(shader_id, vertex);
+        glAttachShader(shader_id, fragment);
+        glLinkProgram(shader_id);
+        
+        // delete the shaders as they're linked into our program now and no longer necessary
+        glDeleteShader(vertex);
+        glDeleteShader(fragment);
+        
+
         initialized = true;
         return true;
     }
 
+    GLuint id() {
+        //return sensor_id;
+        return render_id;
+    }
+
     ~RenderSensor() {
         if (initialized) {
-            glDeleteTextures(1, &spec_id);
+            glDeleteTextures(1, &sensor_id);
         }
     }
 };
@@ -298,7 +411,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                  
                     if(ImPlot::BeginPlot("##image","","",ImVec2(-1,0),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         
-                        ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.spec_id, ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
+                        ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.id(), ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
                         ImPlot::EndPlot();
                     }
                     ImGui::EndTabItem();
@@ -490,17 +603,17 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rs_brdf_sampling_diff.update_data();
 
                     if (ImPlot::BeginPlot("##sample", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling.sensor->w, app_data.rs_brdf_sampling.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling.sensor->w, app_data.rs_brdf_sampling.sensor->h));
                         ImPlot::EndPlot();
                     }
 
                     if (ImPlot::BeginPlot("##sample_pdf", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_pdf.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_pdf.sensor->w, app_data.rs_brdf_sampling_pdf.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_pdf.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_pdf.sensor->w, app_data.rs_brdf_sampling_pdf.sensor->h));
                         ImPlot::EndPlot();
                     }
 
                     if (ImPlot::BeginPlot("##sample_diff", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_diff.spec_id, ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_diff.sensor->w, app_data.rs_brdf_sampling_diff.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_diff.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_diff.sensor->w, app_data.rs_brdf_sampling_diff.sensor->h));
                         ImPlot::EndPlot();
                     }
 
@@ -538,7 +651,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rsen_dir_light.update_data();
 
                     if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.spec_id, ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id(), ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
                         ImPlot::EndPlot();
                     }
 
@@ -551,7 +664,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rsen_glo_ill.update_data();
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.spec_id, ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
+                        ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.id(), ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
                         ImPlot::EndPlot();
                     }
 
@@ -625,16 +738,25 @@ int main(int, char**)
         return 1;
 
     // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
+    const char* glsl_version = "#version 330";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
+    
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1280, 720, "BRDF Viewer", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
+
+
+    GLenum err = glewInit();
+    if (GLEW_OK != err)
+    {
+        std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+        glfwTerminate();
+        return -1;
+    }
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -678,14 +800,14 @@ int main(int, char**)
 
         AppLayout(window, app_data);
 
-        // Rendering
-        ImGui::Render();
 
         int display_w, display_h;
+        // Rendering
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
+        ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);

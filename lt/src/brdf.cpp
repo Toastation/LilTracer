@@ -98,6 +98,13 @@ Float ShapeInvariantMicrosurface<MICROSURFACE>::G1(const vec3& wh, const vec3& w
 }
 
 template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::G2(const vec3& wh, const vec3& wi, const vec3& wo)
+{
+    return G1(wh, wi) * G1(wh, wo);
+    return ms.G2(to_transformed_space(wh), to_unit_space(wi), to_unit_space(wo));
+}
+
+template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh)
 {
     Float det_m = 1. / std::abs(scale.x * scale.y);
@@ -160,7 +167,7 @@ Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
 {
     vec3 wh = glm::normalize(wi + wo);
     Float d = D(wh);
-    Float g = G1(wh,wi) * G1(wh,wo);
+    Float g = G2(wh,wi,wo);
     Spectrum f = fresnelConductor(glm::dot(wh,wi),eta,kappa);
     Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
     return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
@@ -175,7 +182,7 @@ Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& w
     bs.wo = glm::reflect(-wi, wh);
     bs.value = eval(wi, bs.wo) / pdf(wi, bs.wo);
 
-    //Float g = sample_visible_distribution ? G1(wh, bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
+    //Float g = sample_visible_distribution ? G2(wh,wi, bs.wo)  / G1(wh,bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
     //bs.value = F * e;
 
     return bs;
@@ -195,6 +202,11 @@ Float SphereMicrosurface::lambda(const vec3& wi_u)
 
 Float SphereMicrosurface::G1(const vec3& wh_u, const vec3& wi_u) {
     return 1. / (1. + lambda(wi_u));
+}
+
+Float SphereMicrosurface::G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u) {
+    // [Ross05]
+    return 1. / (1. + lambda(wi_u) + lambda(wo_u));
 }
 
 Float SphereMicrosurface::D(const vec3& wh_u) {
@@ -278,6 +290,11 @@ Float BeckmannMicrosurface::lambda(const vec3& wi_u)
 
 Float BeckmannMicrosurface::G1(const vec3& wh_u, const vec3& wi_u) {
     return 1. / (1. + lambda(wi_u));
+}
+
+Float BeckmannMicrosurface::G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u) {
+    // [Ross05]
+    return 1. / (1. + lambda(wi_u) + lambda(wo_u));
 }
 
 Float BeckmannMicrosurface::D(const vec3& wh_u, const vec3& wi_u)
