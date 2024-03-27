@@ -150,14 +150,6 @@ vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(const vec3& wi, Sampler&
     return to_unit_space(ms.sample_D(to_unit_space(wi),sampler));
 }
 
-template <class MICROSURFACE>
-Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
-{
-    vec3 wh = glm::normalize(wi + wo);
-    Float pdf_wh_ = sample_visible_distribution ? pdf_wh(wh,wi) : pdf_wh(wh);
-    return pdf_wh_ / (4. * glm::clamp(glm::dot(wh, wi), 0.0001f, 0.9999f));
-}
-
 /////////////////////
 // RoughShapeInvariantMicrosurface<MICROSURFACE>
 ///////////////////
@@ -166,8 +158,8 @@ template <class MICROSURFACE>
 Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
 {
     vec3 wh = glm::normalize(wi + wo);
-    Float d = D(wh);
-    Float g = G2(wh,wi,wo);
+    Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
+    Float g = ShapeInvariantMicrosurface<MICROSURFACE>::G2(wh,wi,wo);
     Spectrum f = fresnelConductor(glm::dot(wh,wi),eta,kappa);
     Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
     return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
@@ -177,15 +169,31 @@ Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
 template <class MICROSURFACE>
 Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
 {
-    Sample bs;
-    vec3 wh = sample_visible_distribution ? sample_D(wi, sampler) : sample_D(sampler);
+    Brdf::Sample bs;
+
+    vec3 wh = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+            ? ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(wi, sampler)
+            : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
+    
     bs.wo = glm::reflect(-wi, wh);
-    bs.value = eval(wi, bs.wo) / pdf(wi, bs.wo);
+    bs.value = eval(wi, bs.wo) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
 
     //Float g = sample_visible_distribution ? G2(wh,wi, bs.wo)  / G1(wh,bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
     //bs.value = F * e;
 
     return bs;
+}
+
+template <class MICROSURFACE>
+Float RoughShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
+{
+    vec3 wh = glm::normalize(wi + wo);
+    
+    Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution 
+                  ? ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh, wi) 
+                  : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh);
+
+    return pdf_wh_ / (4. * glm::clamp(glm::dot(wh, wi), 0.0001f, 0.9999f));
 }
 
 
@@ -264,6 +272,7 @@ Float BeckmannMicrosurface::pdf(const vec3& wh_u)
 {
     return D(wh_u) * wh_u.z;
 }
+
 vec3 BeckmannMicrosurface::sample_D(Sampler& sampler)
 {
     Float log_sample = std::log(1 - sampler.next_float());

@@ -166,13 +166,14 @@ public:
     Float D(const vec3& wh, const vec3& wi);
     Float pdf_wh(const vec3& wh, const vec3& wi);
     
-    Float pdf(const vec3& wi, const vec3& wo);
 
     vec3 sample_D(Sampler& sampler);
     vec3 sample_D(const vec3& wi, Sampler& sampler);
-    //Sample sample(const vec3& wi, Sampler& sampler);
-
-    //virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
+    
+    // Implemented in child class
+    // Sample sample(const vec3& wi, Sampler& sampler);
+    // Spectrum eval(vec3 wi, vec3 wo) = 0;
+    // Float pdf(const vec3& wi, const vec3& wo);
 
     MICROSURFACE ms;
     bool sample_visible_distribution;
@@ -196,18 +197,18 @@ public:
 };
 
 template <class MICROSURFACE>
-class RoughShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<SphereMicrosurface> {
+class RoughShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<MICROSURFACE> {
 public:
-    RoughShapeInvariantMicrosurface(const std::string& type, const Float& scale_x,
-        const Float& scale_y)
-        : ShapeInvariantMicrosurface<SphereMicrosurface>(type, scale_x, scale_y)
+    RoughShapeInvariantMicrosurface(const std::string& type, const Float& scale_x, const Float& scale_y)
+        : ShapeInvariantMicrosurface<MICROSURFACE>(type, scale_x, scale_y)
     {
         eta = Spectrum(1.);
         kappa = Spectrum(10000.);
     }
 
     Spectrum eval(vec3 wi, vec3 wo);
-    Sample sample(const vec3& wi, Sampler& sampler);
+    Brdf::Sample sample(const vec3& wi, Sampler& sampler);
+    Float pdf(const vec3& wi, const vec3& wo);
 
     Spectrum eta;
     Spectrum kappa;
@@ -217,15 +218,13 @@ public:
 class RoughGGX : public RoughShapeInvariantMicrosurface<SphereMicrosurface> {
 public:
     RoughGGX()
-        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", 0.1,
-            0.1)
+        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", 0.1, 0.1)
     {
         link_params();
     }
 
     RoughGGX(const Float& scale_x, const Float& scale_y)
-        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX",
-            scale_x, scale_y)
+        : RoughShapeInvariantMicrosurface<SphereMicrosurface>("RoughGGX", scale_x, scale_y)
     {
         link_params();
     }
