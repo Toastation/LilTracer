@@ -15,6 +15,7 @@ Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
         { "Diffuse", std::make_shared<Diffuse> },
         { "RoughGGX", std::make_shared<RoughGGX> },
         { "RoughBeckmann", std::make_shared<RoughBeckmann> },
+        { "Mix", std::make_shared<Mix> },
         { "TestBrdf", std::make_shared<TestBrdf> }
     };
     return registry;

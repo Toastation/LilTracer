@@ -237,6 +237,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
                 return false;
 
             // Store references to BRDFs by name
+            // !!! We should  check the existence of json_brdf["name"] !!!
             brdf_ref[json_brdf["name"]] = brdf;
 
             // Set parameters and initialize the BRDF

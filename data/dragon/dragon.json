@@ -1,0 +1,61 @@
+{
+  "integrator": {
+    "type": "BrdfIntegrator",
+    "max_depth" : 8
+  },
+  "max_sample" : 128,
+  "brdf": [
+    {
+      "type": "RoughGGX",
+      "name": "met",
+      "rough_x": 0.25,
+      "rough_y": 0.25,
+      "sample_visible_distribution" : false
+    },
+    {
+      "type": "Diffuse",
+      "name": "dif",
+      "albedo": [ 0.0, 0.0, 0.4 ]
+    },
+    {
+      "type": "Mix",
+      "name": "mat",
+      "brdf1": "met",
+      "brdf2": "dif",
+      "weight": 0.75
+    },
+    {
+      "type": "Diffuse",
+      "name": "floor",
+      "albedo": [ 0.4, 0.4, 0.4 ]
+    }
+  ],
+  "background": {
+    "type": "EnvironmentLight",
+    "texture": "../envmaps/hallstatt4_hd.exr",
+    "intensity": 1.0
+  },
+  "geometries": [
+    {
+      "type": "Mesh",
+      "brdf": "mat",
+      "filename": "dragon.obj"
+    },
+    {
+      "type": "Mesh",
+      "brdf": "floor",
+      "filename": "studio.obj"
+    }
+  ],
+  "sensor": {
+    "width": 720,
+    "height": 720
+  },
+  "camera": {
+    "type": "PerspectiveCamera",
+    "fov": 30,
+    "aspect": 1.0,
+    "center": [ 0.0, 2.0, -0.5 ],
+    "pos": [ 20.1901, 18.5848, -19.17722 ]
+  }
+}
