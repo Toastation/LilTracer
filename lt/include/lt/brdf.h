@@ -21,17 +21,22 @@ namespace LT_NAMESPACE {
 class Brdf : public Serializable {
 public:
 
+
+    enum class Flags
+    {
+        rough = 1 << 0,
+        specular = 1 << 1,
+        diffuse = 1 << 2,
+        reflection = 1 << 3,
+        transmission = 1 << 4,
+        emissive = 1 << 5
+    };
+
     struct Sample {
         vec3 wo;
         Spectrum value; // brdf / pdf
+        Flags flags;
     };
-
-    enum class flags
-    {
-        rough = 1 << 0,
-        specular = 1 << 1
-    };
-
     /**
      * @brief Constructor.
      * @param type The type of the BRDF.
@@ -64,7 +69,8 @@ public:
      * @return The density value.
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
-
+    
+    Flags flags;
     bool emissive;
     virtual Spectrum emission();
 };
@@ -77,6 +83,7 @@ public:
         : Brdf("Emissive")
     {
         emissive = true;
+        //flags = Flags::emissive;
         link_params();
     }
 
