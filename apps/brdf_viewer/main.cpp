@@ -22,8 +22,15 @@ static bool need_reset;
 #define NEED_RESET(x) if(x){ need_reset = true; }
 
 struct RenderSensor {
+
     std::shared_ptr<lt::Sensor> sensor = nullptr;
     bool initialized = false;
+
+    enum Type
+    {
+        Spectrum = 0,
+        Colormap = 1
+    };
 
     // OpenGL stuff
     GLuint sensor_id;
@@ -32,6 +39,8 @@ struct RenderSensor {
     //GLuint render_rb_id;
     GLuint quadVAO, quadVBO;
     GLuint shader_id;
+
+    Type type;
 
 
 
@@ -54,6 +63,7 @@ struct RenderSensor {
         glDisable(GL_DEPTH_TEST);
         
         glUseProgram(shader_id);
+        glUniform1i(glGetUniformLocation(shader_id, "type"), (int)type);
         glBindVertexArray(quadVAO);
         glDisable(GL_DEPTH_TEST);
         glBindTexture(GL_TEXTURE_2D, sensor_id);
@@ -126,14 +136,20 @@ struct RenderSensor {
             "    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
             "}";
 
+        // https://www.shadertoy.com/view/Nd3fR2
         const char* fShaderCode = "#version 330 core\n"
             "out vec4 FragColor;\n"
             "in vec2 TexCoords;\n"
             "uniform sampler2D screenTexture;\n"
+            "uniform int type;\n"
+            "vec3 coolwarm(float t) {const vec3 c0 = vec3(0.227376,0.286898,0.752999); const vec3 c1 = vec3(1.204846,2.314886,1.563499); const vec3 c2 = vec3(0.102341,-7.369214,-1.860252);    const vec3 c3 = vec3(2.218624,32.578457,-1.643751);const vec3 c4 = vec3(-5.076863,-75.374676,-3.704589);const vec3 c5 = vec3(1.336276,73.453060,9.595678);const vec3 c6 = vec3(0.694723,-25.863102,-4.558659);return c0+t*(c1+t*(c2+t*(c3+t*(c4+t*(c5+t*c6)))));}\n"
             "void main()\n"
             "{\n"
-            "    vec3 col = texture(screenTexture, TexCoords).rgb;\n"
-            "    FragColor = vec4(pow(col,vec3(0.4545)), 1.0);\n"
+            "   vec3 col = texture(screenTexture, TexCoords).rgb;\n"
+            "   if(type == 0)\n"
+            "       FragColor = vec4(pow(col,vec3(0.4545)), 1.0);\n"
+            "   else\n"
+            "       FragColor = vec4(vec3(coolwarm(clamp(col.x,-0.5,0.5)+0.5)), 1.0);\n"
             "}";
         
         unsigned int vertex, fragment;
@@ -212,17 +228,20 @@ void AppInit(AppData& app_data) {
     lt::dir_light(app_data.scn_dir_light, app_data.ren_dir_light);
     app_data.rsen_dir_light.sensor = app_data.ren_dir_light.sensor;
     app_data.rsen_dir_light.initialize();
+    app_data.rsen_dir_light.type = RenderSensor::Type::Spectrum;
     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
     lt::generate_from_path("../../../data/lte-orb/lte-orb.json",app_data.scn_glo_ill, app_data.ren_glo_ill);
     app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
     app_data.rsen_glo_ill.initialize();
+    app_data.rsen_glo_ill.type = RenderSensor::Type::Spectrum;
     app_data.scn_glo_ill.geometries[1]->brdf = app_data.brdfs[app_data.current_brdf_idx];
     app_data.scn_glo_ill.geometries[3]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
     app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
+    app_data.rs_brdf_slice.type = RenderSensor::Type::Spectrum;
 
     int res_theta_sampling = 256;
     int res_phi_sampling = 4 * res_theta_sampling;
@@ -230,14 +249,20 @@ void AppInit(AppData& app_data) {
     app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling.sensor = app_data.s_brdf_sampling;
     app_data.rs_brdf_sampling.initialize();
+    app_data.rs_brdf_sampling.type = RenderSensor::Type::Spectrum;
+
 
     app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling_pdf.sensor = app_data.s_brdf_sampling_pdf;
     app_data.rs_brdf_sampling_pdf.initialize();
+    app_data.rs_brdf_sampling_pdf.type = RenderSensor::Type::Spectrum;
+
 
     app_data.s_brdf_sampling_diff = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
     app_data.rs_brdf_sampling_diff.sensor = app_data.s_brdf_sampling_diff;
     app_data.rs_brdf_sampling_diff.initialize();
+    app_data.rs_brdf_sampling_diff.type = RenderSensor::Type::Colormap;
+
 
 
 }
