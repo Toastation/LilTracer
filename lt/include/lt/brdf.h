@@ -14,6 +14,31 @@
 namespace LT_NAMESPACE {
 #define PARAMETER(type, name, default_values) type name = type(default_values)
 
+enum class BrdfFlags : uint16_t
+{
+    rough = 1 << 0,
+    specular = 1 << 1,
+    diffuse = 1 << 2,
+    reflection = 1 << 3,
+    transmission = 1 << 4,
+    emissive = 1 << 5
+};
+
+inline BrdfFlags operator|(const BrdfFlags& lhs, const BrdfFlags& rhs)
+{
+    return (BrdfFlags)(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+}
+
+inline BrdfFlags operator&(const BrdfFlags& lhs, const BrdfFlags& rhs)
+{
+    return (BrdfFlags)(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs));
+}
+
+inline bool is_emissive(const BrdfFlags& flags) {
+    return static_cast<uint16_t>(flags) & static_cast<uint16_t>(BrdfFlags::emissive);
+}
+
+
 /**
  * @brief Base class for Bidirectional Reflectance Distribution Functions
  * (BRDFs).
@@ -22,30 +47,20 @@ class Brdf : public Serializable {
 public:
 
 
-    enum class Flags
-    {
-        rough = 1 << 0,
-        specular = 1 << 1,
-        diffuse = 1 << 2,
-        reflection = 1 << 3,
-        transmission = 1 << 4,
-        emissive = 1 << 5
-    };
 
     struct Sample {
         vec3 wo;
         Spectrum value; // brdf / pdf
-        Flags flags;
+        BrdfFlags flags;
     };
+
     /**
      * @brief Constructor.
      * @param type The type of the BRDF.
      */
     Brdf(const std::string& type)
         : Serializable(type) 
-    {
-        emissive = false;
-    };
+    {};
 
     /**
      * @brief Evaluates the BRDF.
@@ -70,8 +85,7 @@ public:
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
     
-    Flags flags;
-    bool emissive;
+    BrdfFlags flags;
     virtual Spectrum emission();
 };
 
@@ -82,8 +96,7 @@ public:
     Emissive()
         : Brdf("Emissive")
     {
-        emissive = true;
-        //flags = Flags::emissive;
+        flags = BrdfFlags::emissive;
         link_params();
     }
 
@@ -106,6 +119,7 @@ public:
     Diffuse()
         : Brdf("Diffuse")
     {
+        flags = BrdfFlags::diffuse | BrdfFlags::reflection;
         link_params();
     }
 
@@ -209,6 +223,7 @@ public:
     RoughShapeInvariantMicrosurface(const std::string& type, const Float& scale_x, const Float& scale_y)
         : ShapeInvariantMicrosurface<MICROSURFACE>(type, scale_x, scale_y)
     {
+        Brdf::flags = BrdfFlags::rough | BrdfFlags::reflection;
         eta = Spectrum(1.);
         kappa = Spectrum(10000.);
     }
@@ -293,7 +308,10 @@ protected:
 
 
 struct BrdfValidation {
-    std::vector<Float> directionnal_albedo;
+    static int number_of_sample;
+    static int number_of_theta;
+
+    std::vector<Float> directional_albedo;
     bool energy_conservative; // all  directionnal_albedo <  1
     bool correct_sampling;    // sample = pdf
     bool reciprocity;
@@ -310,8 +328,52 @@ struct BrdfValidation {
     
     static BrdfValidation validate(const Brdf& brdf){
         std::cout << "validate " << brdf.type << std::endl;
+
+        // Compute directional albedo
+        
+            // Check if there is negative values
+
+        
+        // Check if all directional albedo are < 1 (energy conservative)
+
+
+
+
+        // Test specific directions to found nan
+        // wi = wo
+
+        
+
+        // Test reciprocity
+
+
+        // Test sampling
+        
+
+        //float dtheta = 0.5 * lt::pi / app_data.s_brdf_sampling->h;
+        //float dphi = 2. * lt::pi / app_data.s_brdf_sampling->w;
+        //float sum_1 = 0.;
+        //float sum_2 = 0.;
+        //float sum_3 = 0.;
+        //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
+        //    for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
+        //        lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
+        //        float theta = 0.5 * lt::pi * (float(y) + 0.5) / app_data.s_brdf_sampling_pdf->h;
+        //        sum_1 += app_data.s_brdf_sampling->get(x, y).x * std::sin(theta) * dtheta * dphi;
+        //        sum_2 += app_data.s_brdf_sampling_pdf->get(x, y).x * std::sin(theta) * dtheta * dphi;
+        //        sum_3 += lt::square_to_cosine_hemisphere_pdf(wo) * std::sin(theta) * dtheta * dphi;
+        //    }
+        //}
+
+        //std::cout << sum_1 << std::endl;
+        //std::cout << sum_2 << std::endl;
+        //std::cout << sum_3 << std::endl;
+
         return BrdfValidation();
     }
+
+
+
 };
 
 

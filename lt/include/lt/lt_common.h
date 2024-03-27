@@ -128,4 +128,15 @@ inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, co
     return 0.5f * (Rp2 + Rs2);
 }
 
+inline glm::mat3 build_tbn_from_w(const vec3& w)
+{
+    vec3 normal = w;
+    float sign = copysignf(1.0f, normal.z);
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
+    vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
+    return glm::mat3(tangent, bitangent, normal);
+}
+
 } // namespace LT_NAMESPACE

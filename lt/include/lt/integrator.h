@@ -257,7 +257,7 @@ public:
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
-            if (depth >= max_depth || si.brdf->emissive)
+            if (depth >= max_depth || is_emissive(si.brdf->flags))
                 return si.brdf->emission();
 
             // Compute BRDF  contrib
@@ -330,7 +330,7 @@ public:
                 return render_pixel(r, scene, sampler);
             }
 
-            if (si.brdf->emissive)
+            if (is_emissive(si.brdf->flags))
                 return si.brdf->emission();
 
             s += uniform_sample_one_light(r, si, scene, sampler);

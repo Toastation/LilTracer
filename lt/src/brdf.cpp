@@ -2,6 +2,9 @@
 
 namespace LT_NAMESPACE {
 
+int BrdfValidation::number_of_theta = 90;
+int BrdfValidation::number_of_sample = 10000;
+
 /////////////////////
 // Brdf Factory
 ///////////////////
@@ -17,10 +20,6 @@ Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
     return registry;
 }
 
-inline Brdf::Flags operator|(Brdf::Flags a, Brdf::Flags b)
-{
-    return static_cast<Brdf::Flags>(static_cast<int>(a) | static_cast<int>(b));
-}
 
 /////////////////////
 // Base 

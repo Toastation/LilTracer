@@ -182,20 +182,6 @@ void EnvironmentLight::compute_density()
 
 
 
-
-
-
-glm::mat3 SphereLight::build_from_w(const vec3& w)
-{
-    vec3 normal = w;
-    float sign = copysignf(1.0f, normal.z);
-    const float a = -1.0f / (sign + normal.z);
-    const float b = normal.x * normal.y * a;
-    vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
-    vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
-    return glm::mat3(tangent, bitangent, normal);
-}
-
 Light::Sample SphereLight::sample(const SurfaceInteraction& si, Sampler& sampler)
 {
     Sample s;
@@ -236,7 +222,7 @@ Light::Sample SphereLight::sample(const SurfaceInteraction& si, Sampler& sampler
     Float y = sin(phi) * sin_theta;
     vec3 cone_sample = vec3(x, y, cos_theta);
 
-    glm::mat3 uvw = build_from_w(direction);
+    glm::mat3 uvw = build_tbn_from_w(direction);
     s.direction = -glm::normalize(uvw * cone_sample);
     s.pdf = 1. / solid_angle;
     s.expected_distance_to_intersection = distance * cos_theta - std::sqrt(rad_sqr - dist_sqr * (1 - cos_theta_sqr));

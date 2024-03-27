@@ -243,7 +243,7 @@ void AppInit(AppData& app_data) {
     app_data.rs_brdf_slice.initialize();
     app_data.rs_brdf_slice.type = RenderSensor::Type::Spectrum;
 
-    int res_theta_sampling = 256;
+    int res_theta_sampling = 64;
     int res_phi_sampling = 4 * res_theta_sampling;
 
     app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(res_phi_sampling, res_theta_sampling);
@@ -627,17 +627,19 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     app_data.rs_brdf_sampling_pdf.update_data();
                     app_data.rs_brdf_sampling_diff.update_data();
 
-                    if (ImPlot::BeginPlot("##sample", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    if (ImPlot::BeginPlot("Sample density", "", "", ImVec2(ImGui::GetWindowWidth() * 0.5, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling.sensor->w, app_data.rs_brdf_sampling.sensor->h));
                         ImPlot::EndPlot();
                     }
 
-                    if (ImPlot::BeginPlot("##sample_pdf", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    ImGui::SameLine();
+
+                    if (ImPlot::BeginPlot("Mean pdf", "", "", ImVec2(ImGui::GetWindowWidth() * 0.5, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_pdf.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_pdf.sensor->w, app_data.rs_brdf_sampling_pdf.sensor->h));
                         ImPlot::EndPlot();
                     }
 
-                    if (ImPlot::BeginPlot("##sample_diff", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    if (ImPlot::BeginPlot("Signed difference between [-0.5,0.5]", "", "", ImVec2(-1, 0.), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rs_brdf_sampling_diff.id(), ImVec2(0, 0), ImVec2(app_data.rs_brdf_sampling_diff.sensor->w, app_data.rs_brdf_sampling_diff.sensor->h));
                         ImPlot::EndPlot();
                     }
@@ -646,25 +648,6 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                         lt::save_sensor_exr(*app_data.s_brdf_sampling, "brdf_sampling.exr");
                         lt::save_sensor_exr(*app_data.s_brdf_sampling_pdf, "brdf_sampling_pdf.exr");
                         lt::save_sensor_exr(*app_data.s_brdf_sampling_diff, "brdf_sampling_diff.exr");
-
-                        //float dtheta = 0.5 * lt::pi / app_data.s_brdf_sampling->h;
-                        //float dphi = 2. * lt::pi / app_data.s_brdf_sampling->w;
-                        //float sum_1 = 0.;
-                        //float sum_2 = 0.;
-                        //float sum_3 = 0.;
-                        //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
-                        //    for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
-                        //        lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
-                        //        float theta = 0.5 * lt::pi * (float(y) + 0.5) / app_data.s_brdf_sampling_pdf->h;
-                        //        sum_1 += app_data.s_brdf_sampling->get(x, y).x * std::sin(theta) * dtheta * dphi;
-                        //        sum_2 += app_data.s_brdf_sampling_pdf->get(x, y).x * std::sin(theta) * dtheta * dphi;
-                        //        sum_3 += lt::square_to_cosine_hemisphere_pdf(wo) * std::sin(theta) * dtheta * dphi;
-                        //    }
-                        //}
-
-                        //std::cout << sum_1 << std::endl;
-                        //std::cout << sum_2 << std::endl;
-                        //std::cout << sum_3 << std::endl;
                     }
 
                     ImGui::EndTabItem();
@@ -703,9 +686,19 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 if (ImGui::BeginTabItem("Validation"))
                 {
                     
-                    if (ImGui::Button("Validate brdf model")) {
+                    if (ImGui::Button("Run validation of current brdf model")) {
                         lt::BrdfValidation::validate(*app_data.brdfs[app_data.current_brdf_idx]);
                     }
+
+                    ImGui::SameLine();
+                    ImGui::PushItemWidth(100.);
+                    ImGui::DragInt("Number of samples", &lt::BrdfValidation::number_of_sample);
+                    ImGui::SameLine();
+                    ImGui::DragInt("Number of thetas", &lt::BrdfValidation::number_of_theta);
+                    ImGui::PopItemWidth();
+
+                    ImGui::Separator();
+
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.correct_sampling ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
                     ImGui::Text("Correct sampling");
                     ImGui::PopStyleColor();

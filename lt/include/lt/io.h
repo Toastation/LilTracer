@@ -297,7 +297,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             set_params(json_geometry, geometry->params, dir, brdf_ref);
             geometry->init();
 
-            if (geometry->brdf->emissive && geometry->type == "Sphere") {
+            if (is_emissive(geometry->brdf->flags) && geometry->type == "Sphere") {
                 std::shared_ptr<SphereLight> sphere_light = std::make_shared<SphereLight>();
                 sphere_light->sphere = std::dynamic_pointer_cast<Sphere>(geometry);
                 sphere_light->init();

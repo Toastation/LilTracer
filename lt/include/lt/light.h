@@ -144,8 +144,6 @@ public:
         link_params();
     }
 
-    glm::mat3 build_from_w(const vec3& w);
-
     Sample sample(const SurfaceInteraction& si, Sampler& sampler);
 
     Spectrum eval(const vec3& direction);
