@@ -69,6 +69,7 @@ inline bool dir_light(Scene& scn, Renderer& ren)
 				{"type":"Sphere","brdf":"sphere_brdf" , "pos":[0,0,0], "rad":1.0}
 			],
 			"sensor": {
+				"type" : "Sensor",
 				"width" : 512,
 				"height" : 512
 			},

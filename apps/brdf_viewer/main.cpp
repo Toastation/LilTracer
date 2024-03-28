@@ -239,6 +239,7 @@ void AppInit(AppData& app_data) {
     app_data.scn_glo_ill.geometries[3]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
     app_data.s_brdf_slice = std::make_shared<lt::Sensor>(256, 64);
+    app_data.s_brdf_slice->init();
     app_data.rs_brdf_slice.sensor = app_data.s_brdf_slice;
     app_data.rs_brdf_slice.initialize();
     app_data.rs_brdf_slice.type = RenderSensor::Type::Spectrum;
@@ -247,18 +248,21 @@ void AppInit(AppData& app_data) {
     int res_phi_sampling = 4 * res_theta_sampling;
 
     app_data.s_brdf_sampling = std::make_shared<lt::HemisphereSensor>(res_phi_sampling, res_theta_sampling);
+    app_data.s_brdf_sampling->init();
     app_data.rs_brdf_sampling.sensor = app_data.s_brdf_sampling;
     app_data.rs_brdf_sampling.initialize();
     app_data.rs_brdf_sampling.type = RenderSensor::Type::Spectrum;
 
 
     app_data.s_brdf_sampling_pdf = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
+    app_data.s_brdf_sampling_pdf->init();
     app_data.rs_brdf_sampling_pdf.sensor = app_data.s_brdf_sampling_pdf;
     app_data.rs_brdf_sampling_pdf.initialize();
     app_data.rs_brdf_sampling_pdf.type = RenderSensor::Type::Spectrum;
 
 
     app_data.s_brdf_sampling_diff = std::make_shared<lt::Sensor>(res_phi_sampling, res_theta_sampling);
+    app_data.s_brdf_sampling_diff->init();
     app_data.rs_brdf_sampling_diff.sensor = app_data.s_brdf_sampling_diff;
     app_data.rs_brdf_sampling_diff.initialize();
     app_data.rs_brdf_sampling_diff.type = RenderSensor::Type::Colormap;

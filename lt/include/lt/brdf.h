@@ -376,6 +376,25 @@ public:
         return weight * brdf1->eval(wi, wo, sampler) + (1.f - weight) * brdf2->eval(wi, wo, sampler);
     }
 
+
+    Sample sample(const vec3& wi, Sampler& sampler) 
+    {
+        Sample bs;
+        if (sampler.next_float() < weight) {
+            bs = brdf1->sample(wi, sampler);
+            bs.value /= weight;
+        }
+        else {
+            bs = brdf2->sample(wi, sampler);
+            bs.value /= 1. - weight;
+        }
+        return bs;
+    }
+
+    Float pdf(const vec3& wi, const vec3& wo) {
+        return weight * brdf1->pdf(wi, wo) + (1.f - weight) * brdf2->pdf(wi, wo);
+    }
+
     std::shared_ptr<Brdf> brdf1;
     std::shared_ptr<Brdf> brdf2;
     Float weight;

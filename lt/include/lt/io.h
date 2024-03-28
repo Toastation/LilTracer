@@ -201,10 +201,16 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
     // Parse Sensor
     if (json_scn.contains("sensor")) {
         json json_sensor = json_scn["sensor"];
-        uint16_t width = json_sensor["width"];
-        uint16_t height = json_sensor["height"];
-        // Create and set the sensor in the renderer
-        ren.sensor = std::make_shared<Sensor>(width, height);
+        std::shared_ptr<Sensor> sensor = Factory<Sensor>::create(json_sensor["type"]);
+
+        if (!sensor)
+            return false;
+
+        // Set parameters and initialize the sensor
+        set_params(json_sensor, sensor->params, dir, brdf_ref);
+        sensor->init();
+
+        ren.sensor = sensor;
     } else {
         std::cerr << "Abort generate_from_json, cause : Missing sensor"
                   << std::endl;

@@ -86,6 +86,7 @@
     }
   ],
   "sensor": {
+    "type": "Sensor",
     "width": 1080,
     "height": 720
   },

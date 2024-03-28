@@ -5,6 +5,8 @@
 
 #pragma once
 #include <lt/lt_common.h>
+#include <lt/serialize.h>
+#include <lt/factory.h>
 
 namespace LT_NAMESPACE {
 
@@ -15,16 +17,18 @@ namespace LT_NAMESPACE {
  * It provides functionality for resetting the sensor, adding samples, setting
  * samples, and retrieving the number of samples at a specific pixel.
  */
-class Sensor {
+class Sensor : public Serializable {
 public:
     /**
      * @brief Default constructor.
      */
-    Sensor()
-        : w(0)
-        , h(0) {
-        sum_counts = 0;
-    };
+    Sensor(const std::string& type = "Sensor", const uint32_t& w = 0, const uint32_t& h = 0)
+        : Serializable(type)
+        , w(w)
+        , h(h)
+    {
+        link_params();
+    }
 
     /**
      * @brief Parameterized constructor.
@@ -32,16 +36,14 @@ public:
      * @param h Height of the sensor.
      */
     Sensor(const uint32_t& w, const uint32_t& h)
-        : w(w)
+        : Serializable("Sensor")
+        , w(w)
         , h(h)
     {
-        value.resize(w * h);
-        acculumator.resize(w * h);
-        count.resize(w * h);
-        u = linspace<Float>(-1, 1, w);
-        v = linspace<Float>(1, -1, h);
-        sum_counts = 0;
+        link_params();
     }
+
+    void init();
 
     /**
      * @brief Resets the sensor data.
@@ -49,13 +51,7 @@ public:
      * This function resets the accumulator, value, and count arrays of the
      * sensor.
      */
-    void reset()
-    {
-        memset(acculumator.data(), 0, sizeof(Spectrum) * acculumator.size());
-        memset(value.data(), 0, sizeof(Spectrum) * value.size());
-        memset(count.data(), 0, sizeof(uint16_t) * count.size());
-        sum_counts = 0;
-    }
+    virtual void reset();
 
     /**
      * @brief Adds a sample to the sensor data.
@@ -64,14 +60,7 @@ public:
      * @param y The y-coordinate of the sample.
      * @param s The spectrum of the sample.
      */
-    void add(const uint32_t& x, const uint32_t& y, Spectrum s)
-    {
-        uint32_t idx = y * w + x;
-        acculumator[idx] += s;
-        count[idx]++;
-        sum_counts++;
-        set_value(idx,y);
-    }
+    virtual void add(const uint32_t& x, const uint32_t& y, Spectrum s);
 
     /**
      * @brief Sets a sample in the sensor data.
@@ -80,17 +69,9 @@ public:
      * @param y The y-coordinate of the sample.
      * @param s The spectrum of the sample.
      */
-    void set(const uint32_t& x, const uint32_t& y, Spectrum s)
-    {
-        uint32_t idx = y * w + x;
-        acculumator[idx] = s;
-        count[idx] = 1;
-        set_value(idx,y);
-    }
+    virtual void set(const uint32_t& x, const uint32_t& y, Spectrum s);
 
-    Spectrum get(const uint32_t& x, const uint32_t& y) {
-        return value[y * w + x];
-    }
+    virtual Spectrum get(const uint32_t& x, const uint32_t& y);
 
     /**
      * @brief Gets the number of samples at a specific pixel.
@@ -99,18 +80,9 @@ public:
      * @param y The y-coordinate of the pixel.
      * @return The number of samples at the specified pixel.
      */
-    uint16_t n_sample(const uint32_t& x, const uint32_t& y)
-    {
-        return count[y * w + x];
-    }
+    uint16_t n_sample(const uint32_t& x, const uint32_t& y);
 
-    virtual void set_value(const uint32_t& idx, const uint32_t& x){
-        value[idx] = acculumator[idx] / (Float)count[idx];
-        // Gamma correction
-        // value[idx] = glm::pow(value[idx], Spectrum(0.4545));
-
-        assert(value[idx] == value[idx]);
-    }
+    virtual void set_value(const uint32_t& idx, const uint32_t& x);
 
     uint32_t w; /**< Width of the sensor. */
     uint32_t h; /**< Height of the sensor. */
@@ -120,6 +92,66 @@ public:
     std::atomic<uint32_t> sum_counts;
     std::vector<Float> u; /**< Vector representing the u-coordinates of the sensor pixels. */
     std::vector<Float> v; /**< Vector representing the v-coordinates of the sensor pixels. */
+
+
+protected:
+    void link_params()
+    {
+        params.add("width", Params::Type::INT, &w);
+        params.add("height", Params::Type::INT, &h);
+    }
+};
+
+class VarianceSensor : public Sensor
+{
+public:
+
+    VarianceSensor()
+        : Sensor("Variance")
+    {};
+
+    VarianceSensor(const uint32_t& w, const uint32_t& h)
+        : Sensor("Variance", w, h)
+    {};
+
+    void init() {
+        Sensor::init();
+        acculumator_sqr.resize(w * h);
+    }
+    
+    void reset() {
+        Sensor::reset();
+        memset(acculumator_sqr.data(), 0, sizeof(Spectrum) * acculumator_sqr.size());
+    }
+    
+    void add(const uint32_t& x, const uint32_t& y, Spectrum s) 
+    {
+        uint32_t idx = y * w + x;
+        acculumator[idx] += s;
+        acculumator_sqr[idx] += s*s;
+        count[idx]++;
+        sum_counts++;
+        set_value(idx, y);
+    }
+
+    void set(const uint32_t& x, const uint32_t& y, Spectrum s)
+    {
+        uint32_t idx = y * w + x;
+        acculumator[idx] = s;
+        acculumator_sqr[idx] = s*s;
+        count[idx] = 1;
+        set_value(idx, y);
+    }
+
+    void set_value(const uint32_t& idx, const uint32_t& y)
+    {
+        Spectrum mean = acculumator[idx] / (Float)count[idx];
+        value[idx] = acculumator_sqr[idx] / (Float)count[idx] - mean * mean;
+        assert(value[idx] == value[idx]);
+    }
+
+    std::vector<Spectrum> acculumator_sqr;
+
 };
 
 
@@ -127,28 +159,20 @@ class HemisphereSensor : public Sensor
 {
 public:
 
-    HemisphereSensor() : Sensor() {
-        dtheta = -1.;
-        dphi = -1.;
-    };
-    HemisphereSensor(const uint32_t& w, const uint32_t& h) : Sensor(w, h) {
-        dtheta = 0.5 * pi / Float(h);
-        dphi = 2 * pi / Float(w);
+    HemisphereSensor() 
+        : Sensor("HemisphereSensor")
+        , dtheta(-1.)
+        , dphi(-1.)
+    {};
 
-        std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, h);
-        
-        solid_angle.resize(h);
-        for (int i = 0; i < h; i++)
-            solid_angle[i] = std::sin(th[i]) * dtheta * dphi;
-
+    HemisphereSensor(const uint32_t& w, const uint32_t& h) 
+        : Sensor("HemisphereSensor", w, h) 
+    {
+        init();
     };
 
-    void set_value(const uint32_t& idx, const uint32_t& y) {
-        Float norm = sum_counts * solid_angle[y];
-        value[idx] = acculumator[idx] / norm;
-        // Gamma correction
-        // value[idx] = glm::pow(value[idx], Spectrum(0.4545));
-    }
+    void init();
+    void set_value(const uint32_t& idx, const uint32_t& y);
 
     std::vector<Float> solid_angle; /**< Vector representing the u-coordinates of the sensor pixels. */
     Float dtheta;

@@ -3,7 +3,7 @@
     "type": "BrdfIntegrator",
     "max_depth" : 8
   },
-  "max_sample" : 128,
+  "max_sample" : 512,
   "brdf": [
     {
       "type": "RoughGGX",
@@ -48,6 +48,7 @@
     }
   ],
   "sensor": {
+    "type": "VarianceSensor",
     "width": 720,
     "height": 720
   },
