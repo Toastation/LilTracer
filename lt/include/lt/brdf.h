@@ -14,30 +14,6 @@
 namespace LT_NAMESPACE {
 #define PARAMETER(type, name, default_values) type name = type(default_values)
 
-enum class BrdfFlags : uint16_t
-{
-    rough = 1 << 0,
-    specular = 1 << 1,
-    diffuse = 1 << 2,
-    reflection = 1 << 3,
-    transmission = 1 << 4,
-    emissive = 1 << 5
-};
-
-inline BrdfFlags operator|(const BrdfFlags& lhs, const BrdfFlags& rhs)
-{
-    return (BrdfFlags)(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
-}
-
-inline BrdfFlags operator&(const BrdfFlags& lhs, const BrdfFlags& rhs)
-{
-    return (BrdfFlags)(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs));
-}
-
-inline bool is_emissive(const BrdfFlags& flags) {
-    return static_cast<uint16_t>(flags) & static_cast<uint16_t>(BrdfFlags::emissive);
-}
-
 
 /**
  * @brief Base class for Bidirectional Reflectance Distribution Functions
@@ -47,11 +23,21 @@ class Brdf : public Serializable {
 public:
 
 
+    enum class Flags : uint16_t
+    {
+        rough = 1 << 0,
+        specular = 1 << 1,
+        diffuse = 1 << 2,
+        reflection = 1 << 3,
+        transmission = 1 << 4,
+        emissive = 1 << 5
+    };
+
 
     struct Sample {
         vec3 wo;
         Spectrum value; // brdf / pdf
-        BrdfFlags flags;
+        Flags flags;
     };
 
     /**
@@ -63,12 +49,12 @@ public:
     {};
 
     /**
-     * @brief Evaluates the BRDF.
+     * @brief Evaluates the BRDF * cos_theta_o.
      * @param wi Incident direction.
      * @param wo Outgoing direction.
      * @return The evaluated spectrum.
      */
-    virtual Spectrum eval(vec3 wi, vec3 wo);
+    virtual Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
 
     /**
      * @brief Samples the BRDF.
@@ -85,9 +71,34 @@ public:
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
     
-    BrdfFlags flags;
+    /**
+     * @brief Evaluates the BRDF * cos_theta_o / pdf.
+     * @param wi Incident direction.
+     * @param wo Outgoing direction.
+     * @return The evaluated spectrum.
+     */
+    virtual Spectrum eval_optim(vec3 wi, vec3 wo, Sampler& sampler);
+
+    
+    Flags flags;
+    inline bool is_emissive() {
+        return static_cast<uint16_t>(flags) & static_cast<uint16_t>(Flags::emissive);
+    }
+
     virtual Spectrum emission();
+
 };
+
+
+inline Brdf::Flags operator|(const Brdf::Flags& lhs, const Brdf::Flags& rhs)
+{
+    return (Brdf::Flags)(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+}
+
+inline Brdf::Flags operator&(const Brdf::Flags& lhs, const Brdf::Flags& rhs)
+{
+    return (Brdf::Flags)(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs));
+}
 
 class Emissive : public Brdf {
 public:
@@ -96,7 +107,7 @@ public:
     Emissive()
         : Brdf("Emissive")
     {
-        flags = BrdfFlags::emissive;
+        flags = Flags::emissive;
         link_params();
     }
 
@@ -119,11 +130,11 @@ public:
     Diffuse()
         : Brdf("Diffuse")
     {
-        flags = BrdfFlags::diffuse | BrdfFlags::reflection;
+        flags = Flags::diffuse | Flags::reflection;
         link_params();
     }
 
-    Spectrum eval(vec3 wi, vec3 wo);
+    Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
 
 protected:
     void link_params() { params.add("albedo", Params::Type::VEC3, &albedo); }
@@ -149,7 +160,7 @@ public:
         link_params();
     }
 
-    Spectrum eval(vec3 wi, vec3 wo);
+    Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
 
 protected:
     void link_params()
@@ -198,23 +209,7 @@ public:
 
     MICROSURFACE ms;
     bool sample_visible_distribution;
-};
-
-class SphereMicrosurface {
-public:
-    Float D(const vec3& wh_u);
-    Float D(const vec3& wh_u, const vec3& wi_u);
-     
-    Float pdf(const vec3& wh_u);
-    Float pdf(const vec3& wh_u, const vec3& wi_u);
-  
-    vec3 sample_D(Sampler& sampler);
-    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
-    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
-    
-    Float lambda(const vec3& wi_u);
-    Float G1(const vec3& wh_u, const vec3& wi_u);
-    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
+    bool optimize;
 };
 
 template <class MICROSURFACE>
@@ -223,12 +218,12 @@ public:
     RoughShapeInvariantMicrosurface(const std::string& type, const Float& scale_x, const Float& scale_y)
         : ShapeInvariantMicrosurface<MICROSURFACE>(type, scale_x, scale_y)
     {
-        Brdf::flags = BrdfFlags::rough | BrdfFlags::reflection;
+        Brdf::flags = Brdf::Flags::rough | Brdf::Flags::reflection;
         eta = Spectrum(1.);
         kappa = Spectrum(10000.);
     }
 
-    Spectrum eval(vec3 wi, vec3 wo);
+    Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
     Brdf::Sample sample(const vec3& wi, Sampler& sampler);
     Float pdf(const vec3& wi, const vec3& wo);
 
@@ -236,6 +231,42 @@ public:
     Spectrum kappa;
 };
 
+
+template <class MICROSURFACE>
+class DiffuseShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<MICROSURFACE> {
+public:
+    DiffuseShapeInvariantMicrosurface(const std::string& type, const Float& scale_x, const Float& scale_y)
+        : ShapeInvariantMicrosurface<MICROSURFACE>(type, scale_x, scale_y)
+    {
+        Brdf::flags = Brdf::Flags::diffuse | Brdf::Flags::reflection;
+        albedo = Spectrum(0.5);
+    }
+
+    Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
+    Brdf::Sample sample(const vec3& wi, Sampler& sampler);
+    Float pdf(const vec3& wi, const vec3& wo);
+
+    Spectrum albedo;
+};
+
+
+
+class SphereMicrosurface {
+public:
+    Float D(const vec3& wh_u);
+    Float D(const vec3& wh_u, const vec3& wi_u);
+
+    Float pdf(const vec3& wh_u);
+    Float pdf(const vec3& wh_u, const vec3& wi_u);
+
+    vec3 sample_D(Sampler& sampler);
+    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
+    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
+
+    Float lambda(const vec3& wi_u);
+    Float G1(const vec3& wh_u, const vec3& wi_u);
+    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
+};
 
 class RoughGGX : public RoughShapeInvariantMicrosurface<SphereMicrosurface> {
 public:
@@ -261,6 +292,34 @@ protected:
         params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
     }
 };
+
+
+
+class DiffuseGGX : public DiffuseShapeInvariantMicrosurface<SphereMicrosurface> {
+public:
+    DiffuseGGX()
+        : DiffuseShapeInvariantMicrosurface<SphereMicrosurface>("DiffuseGGX", 0.1, 0.1)
+    {
+        link_params();
+    }
+
+    DiffuseGGX(const Float& scale_x, const Float& scale_y)
+        : DiffuseShapeInvariantMicrosurface<SphereMicrosurface>("DiffuseGGX", scale_x, scale_y)
+    {
+        link_params();
+    }
+
+protected:
+    void link_params()
+    {
+        params.add("rough_x", Params::Type::FLOAT, &scale[0]);
+        params.add("rough_y", Params::Type::FLOAT, &scale[1]);
+        params.add("albedo", Params::Type::VEC3, &albedo);
+        params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
+    }
+};
+
+
 
 
 class BeckmannMicrosurface {
@@ -311,7 +370,6 @@ public:
 
     Mix() : Brdf("Mix")
     {
-        flags = BrdfFlags::diffuse | BrdfFlags::reflection;
         link_params();
     }
 
@@ -319,8 +377,8 @@ public:
         flags = brdf1->flags | brdf2->flags;
     }
 
-    Spectrum eval(vec3 wi, vec3 wo) {
-        return weight * brdf1->eval(wi, wo) + (1.f - weight) * brdf2->eval(wi, wo);
+    Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler) {
+        return weight * brdf1->eval(wi, wo, sampler) + (1.f - weight) * brdf2->eval(wi, wo, sampler);
     }
 
     std::shared_ptr<Brdf> brdf1;

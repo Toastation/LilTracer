@@ -198,9 +198,9 @@ public:
         Ray rs(si.pos, -ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
-            vec3 brdf_contrib = si.brdf->eval(wi, wo);
+            vec3 brdf_contrib = si.brdf->eval(wi, wo, sampler);
             #if !defined(USE_MIS)
-            if (light->is_dirac) {
+            if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
             }
             else {
@@ -214,7 +214,7 @@ public:
         }
 
         #if !defined(USE_MIS)
-        if (!light->is_dirac) {
+        if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
             Float weight = 1;
 
@@ -257,7 +257,7 @@ public:
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
-            if (depth >= max_depth || is_emissive(si.brdf->flags))
+            if (depth >= max_depth || si.brdf->is_emissive())
                 return si.brdf->emission();
 
             // Compute BRDF  contrib
@@ -269,7 +269,7 @@ public:
 
             #if !defined(SAMPLE_OPTIM)
             Float pdf = si.brdf->pdf(wi, bs.wo);
-            Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo);
+            Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo, sampler);
             assert(brdf_cos_weighted.x == brdf_cos_weighted.x);
             #endif
 
@@ -330,7 +330,7 @@ public:
                 return render_pixel(r, scene, sampler);
             }
 
-            if (is_emissive(si.brdf->flags))
+            if (si.brdf->is_emissive())
                 return si.brdf->emission();
 
             s += uniform_sample_one_light(r, si, scene, sampler);
@@ -391,7 +391,7 @@ public:
                 
                 #if !defined(SAMPLE_OPTIM)
                 Float wo_pdf = si.brdf->pdf(wi, bs.wo);
-                Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo);
+                Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo, sampler);
                 throughput *= brdf_cos_weighted / wo_pdf;
                 #else
                 throughput *= bs.value;

@@ -12,11 +12,6 @@ Factory<Light>::CreatorRegistry& Factory<Light>::registry()
     return registry;
 }
 
-int Light::geometry_id() 
-{
-    return -1;
-}
-
 void DirectionnalLight::init()
 { 
     dir = glm::normalize(dir);

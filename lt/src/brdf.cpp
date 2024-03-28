@@ -13,6 +13,7 @@ Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
     static Factory<Brdf>::CreatorRegistry registry {
         { "Emissive", std::make_shared<Emissive> },
         { "Diffuse", std::make_shared<Diffuse> },
+        { "DiffuseGGX", std::make_shared<DiffuseGGX> },
         { "RoughGGX", std::make_shared<RoughGGX> },
         { "RoughBeckmann", std::make_shared<RoughBeckmann> },
         { "Mix", std::make_shared<Mix> },
@@ -25,16 +26,16 @@ Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
 /////////////////////
 // Base 
 ///////////////////
-Spectrum Brdf::eval(vec3 wi, vec3 wo) 
+Spectrum Brdf::eval(vec3 wi, vec3 wo, Sampler& sampler) 
 {
     return Spectrum(0.); 
 };
 
-Brdf::Sample Brdf::sample(const vec3& wi, Sampler& s)
+Brdf::Sample Brdf::sample(const vec3& wi, Sampler& sampler)
 { 
     Sample bs;
-    bs.wo = square_to_cosine_hemisphere(s.next_float(), s.next_float());
-    bs.value = eval(wi, bs.wo) / pdf(wi, bs.wo);
+    bs.wo = square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
+    bs.value = eval(wi, bs.wo, sampler) / pdf(wi, bs.wo);
     return bs;
 }
 
@@ -42,6 +43,11 @@ float Brdf::pdf(const vec3& wi, const vec3& wo)
 {
     return square_to_cosine_hemisphere_pdf(wo); 
 }
+
+Spectrum Brdf::eval_optim(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    return eval(wi,wo,sampler) / pdf(wi,wo);
+};
 
 Spectrum Brdf::emission() 
 {
@@ -59,7 +65,7 @@ Spectrum Emissive::emission()
 /////////////////////
 // Diffuse 
 ///////////////////
-Spectrum Diffuse::eval(vec3 wi, vec3 wo)
+Spectrum Diffuse::eval(vec3 wi, vec3 wo, Sampler& sampler)
 {
     return albedo / pi * glm::clamp(wo[2], 0.f, 1.f);
 }
@@ -67,7 +73,7 @@ Spectrum Diffuse::eval(vec3 wi, vec3 wo)
 /////////////////////
 // TestBrdf 
 ///////////////////
-Spectrum TestBrdf::eval(vec3 wi, vec3 wo)
+Spectrum TestBrdf::eval(vec3 wi, vec3 wo, Sampler& sampler)
 {
     return Spectrum(wo.z);
 }
@@ -160,7 +166,7 @@ vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(const vec3& wi, Sampler&
 ///////////////////
 
 template <class MICROSURFACE>
-Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo)
+Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, Sampler& sampler)
 {
     vec3 wh = glm::normalize(wi + wo);
     Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
@@ -181,7 +187,8 @@ Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& w
             : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
     
     bs.wo = glm::reflect(-wi, wh);
-    bs.value = eval(wi, bs.wo) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
+    
+    bs.value = eval(wi, bs.wo, sampler) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
 
     //Float g = sample_visible_distribution ? G2(wh,wi, bs.wo)  / G1(wh,bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
     //bs.value = F * e;
@@ -199,6 +206,52 @@ Float RoughShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const v
                   : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh);
 
     return pdf_wh_ / (4. * glm::clamp(glm::dot(wh, wi), 0.0001f, 0.9999f));
+}
+
+
+
+/////////////////////
+// DiffuseShapeInvariantMicrosurface<MICROSURFACE>
+///////////////////
+
+template <class MICROSURFACE>
+Spectrum DiffuseShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    vec3 wh = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(wi, sampler)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
+
+    Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh, wi)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh);
+
+    Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
+    Float g = ShapeInvariantMicrosurface<MICROSURFACE>::G2(wh, wi, wo);
+    
+    Float i_dot_m = glm::clamp(glm::dot(wi, wh), 0.00001f, 0.99999f);
+    Float o_dot_m = glm::clamp(glm::dot(wo, wh), 0.00001f, 0.99999f);
+    Float cos_theta_i = glm::clamp(wi[2], 0.00001f, 0.99999f);
+    
+    Float brdf = i_dot_m * o_dot_m * d * g / pdf_wh_;
+    return albedo * brdf / cos_theta_i / pi;
+}
+
+
+template <class MICROSURFACE>
+Brdf::Sample DiffuseShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
+{
+    Brdf::Sample bs;
+
+    bs.wo = square_to_cosine_hemisphere(sampler.next_float(),sampler.next_float());
+    bs.value = eval(wi, bs.wo, sampler) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
+    
+    return bs;
+}
+
+template <class MICROSURFACE>
+Float DiffuseShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
+{
+    return square_to_cosine_hemisphere_pdf(wo);
 }
 
 

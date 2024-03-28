@@ -14,36 +14,64 @@
 
 namespace LT_NAMESPACE {
 
+
 /**
  * @brief Abstract base class for light sources.
  */
-    class Light : public Serializable {
-    public:
-        struct Sample {
-            vec3 direction;
-            vec3 emission;
-            Float pdf;
-            Float expected_distance_to_intersection;
-        };
+class Light : public Serializable {
+public:
 
-        /**
-         * @brief Constructor for Light.
-         * @param type The type of light. ex : DirectionnalLight, EnvironmentLight ...
-         */
-        Light(const std::string& type)
-            : Serializable(type)
-        {
-        }
+    enum class Flags : uint16_t
+    {
+        dirac = 1 << 0,
+        infinite = 1 << 1
+    };
 
-        virtual Sample sample(const SurfaceInteraction& si, Sampler& sampler) = 0;
 
-        virtual Spectrum eval(const vec3& direction) = 0;
-        virtual Float pdf(const vec3& p, const vec3& ld) = 0;
+    struct Sample {
+        vec3 direction;
+        vec3 emission;
+        Float pdf;
+        Float expected_distance_to_intersection;
+    };
 
-        bool has_geometry;
-        virtual int geometry_id();
-        bool is_dirac;
+    /**
+        * @brief Constructor for Light.
+        * @param type The type of light. ex : DirectionnalLight, EnvironmentLight ...
+        */
+    Light(const std::string& type)
+        : Serializable(type)
+    {}
+
+    virtual Sample sample(const SurfaceInteraction& si, Sampler& sampler) = 0;
+
+    virtual Spectrum eval(const vec3& direction) = 0;
+    virtual Float pdf(const vec3& p, const vec3& ld) = 0;
+
+    Flags flags;
+    inline bool is_dirac() {
+        return static_cast<uint16_t>(flags) & static_cast<uint16_t>(Light::Flags::dirac);
+    }
+
+    inline bool is_infinite() {
+        return static_cast<uint16_t>(flags) & static_cast<uint16_t>(Light::Flags::infinite);
+    }
 };
+
+    
+inline Light::Flags operator|(const Light::Flags& lhs, const Light::Flags& rhs)
+{
+    return (Light::Flags)(static_cast<uint16_t>(lhs) | static_cast<uint16_t>(rhs));
+}
+    
+inline Light::Flags operator&(const Light::Flags& lhs, const Light::Flags& rhs)
+{
+    return (Light::Flags)(static_cast<uint16_t>(lhs) & static_cast<uint16_t>(rhs));
+}
+
+
+
+    
 
 /**
  * @brief Class representing a directional light source.
@@ -57,8 +85,7 @@ public:
     DirectionnalLight()
         : Light("DirectionnalLight")
     {
-        has_geometry = false;
-        is_dirac = true;
+        flags = Flags::dirac | Flags::infinite;
         link_params();
     }
 
@@ -99,8 +126,7 @@ public:
     EnvironmentLight()
         : Light("EnvironmentLight")
     {
-        has_geometry = false;
-        is_dirac = false;
+        flags = Flags::infinite;
         link_params();
     }
 
@@ -138,9 +164,7 @@ public:
     SphereLight()
         : Light("SphereLight")
     {
-
-        has_geometry = true;
-        is_dirac = false;
+        flags = (Flags)0;
         link_params();
     }
 

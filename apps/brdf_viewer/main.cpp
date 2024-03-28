@@ -268,7 +268,7 @@ void AppInit(AppData& app_data) {
 }
 
 
-void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::shared_ptr<lt::Sensor> sensor) {
+void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::shared_ptr<lt::Sensor> sensor, lt::Sampler& sampler) {
 
 #if 1
     std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, sensor->h);
@@ -278,7 +278,7 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
     for (int x = 0; x < sensor->w; x++) {
         for (int y = 0; y < sensor->h; y++) {
             lt::vec3 wo = lt::polar_to_card(th[y], ph[x]);
-            sensor->value[y * sensor->w + x] = brdf->eval(wi, wo);
+            sensor->value[y * sensor->w + x] = brdf->eval(wi, wo, sampler);
         }
     }
 #endif
@@ -431,7 +431,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                     std::shared_ptr<lt::Brdf> cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
 
-                    brdf_slice(cur_brdf, app_data.theta_i, app_data.phi_i, app_data.s_brdf_slice);
+                    brdf_slice(cur_brdf, app_data.theta_i, app_data.phi_i, app_data.s_brdf_slice, app_data.sampler);
                     app_data.rs_brdf_slice.update_data();
                  
                     if(ImPlot::BeginPlot("##image","","",ImVec2(-1,0),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
@@ -464,7 +464,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                         for (int x = 0; x < 1001; x++) {
                                             lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                             lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                            lt::vec3 rgb = brdf->eval(wi, wo);
+                                            lt::vec3 rgb = brdf->eval(wi, wo, app_data.sampler);
                                             float l = (rgb.x + rgb.y + rgb.z) / 3.;
                                             xs[x] = wo.x * l;
                                             ys[x] = wo.z * l;
@@ -483,7 +483,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                     for (int x = 0; x < 1001; x++) {
                                         lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                         lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                        rgb[x] = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo);
+                                        rgb[x] = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo, app_data.sampler);
                                     }
 
                                     const char* col_name[3] = { "r", "g", "b" };
@@ -527,7 +527,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                         for (int x = 0; x < 1001; x++) {
                                             lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                             lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                            lt::vec3 rgb = brdf->eval(wi, wo);
+                                            lt::vec3 rgb = brdf->eval(wi, wo, app_data.sampler);
                                             xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
 
                                         }
@@ -547,7 +547,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                     for (int x = 0; x < 1001; x++) {
                                         lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                         lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                        lt::vec3 rgb = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo);
+                                        lt::vec3 rgb = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo, app_data.sampler);
                                         r[x] = rgb.x;
                                         g[x] = rgb.y;
                                         b[x] = rgb.z;
