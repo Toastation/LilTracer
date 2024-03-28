@@ -44,11 +44,6 @@ float Brdf::pdf(const vec3& wi, const vec3& wo)
     return square_to_cosine_hemisphere_pdf(wo); 
 }
 
-Spectrum Brdf::eval_optim(vec3 wi, vec3 wo, Sampler& sampler)
-{
-    return eval(wi,wo,sampler) / pdf(wi,wo);
-};
-
 Spectrum Brdf::emission() 
 {
     return Spectrum(0.); 
@@ -70,6 +65,19 @@ Spectrum Diffuse::eval(vec3 wi, vec3 wo, Sampler& sampler)
     return albedo / pi * glm::clamp(wo[2], 0.f, 1.f);
 }
 
+Brdf::Sample Diffuse::sample(const vec3& wi, Sampler& sampler)
+{
+    Sample bs;
+    bs.wo = square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
+    bs.value = albedo;
+    return bs;
+}
+
+float Diffuse::pdf(const vec3& wi, const vec3& wo)
+{
+    return square_to_cosine_hemisphere_pdf(wo);
+}
+
 /////////////////////
 // TestBrdf 
 ///////////////////
@@ -81,15 +89,6 @@ Spectrum TestBrdf::eval(vec3 wi, vec3 wo, Sampler& sampler)
 /////////////////////
 // ShapeInvariantMicrosurface<MICROSURFACE>
 ///////////////////
-template <class MICROSURFACE>
-Float ShapeInvariantMicrosurface<MICROSURFACE>::scale_wi(const vec3& wi) const
-{
-    Float inv_sin_theta_sqr = 1.0 / (1.0 - wi.z * wi.z);
-    Float cos_phi_sqr = wi.x * wi.x * inv_sin_theta_sqr;
-    Float sin_phi_sqr = wi.y * wi.y * inv_sin_theta_sqr;
-    return std::sqrt(cos_phi_sqr * scale.x * scale.x + sin_phi_sqr * scale.y * scale.y);
-}
-
 template <class MICROSURFACE>
 vec3 ShapeInvariantMicrosurface<MICROSURFACE>::to_unit_space(const vec3& wi) 
 {
@@ -176,6 +175,17 @@ Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, S
     return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
 }
 
+template <class MICROSURFACE>
+Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval_optim(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    if (ShapeInvariantMicrosurface<MICROSURFACE>::optimize) {
+        return ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+            ? eval(wi, wo, sampler) / pdf(wi, wo)
+            : eval(wi, wo, sampler) / pdf(wi, wo);
+    }
+    return eval(wi, wo, sampler) / pdf(wi, wo);
+}
+
 
 template <class MICROSURFACE>
 Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
@@ -188,7 +198,7 @@ Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& w
     
     bs.wo = glm::reflect(-wi, wh);
     
-    bs.value = eval(wi, bs.wo, sampler) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
+    bs.value = eval_optim(wi, bs.wo, sampler);
 
     //Float g = sample_visible_distribution ? G2(wh,wi, bs.wo)  / G1(wh,bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
     //bs.value = F * e;

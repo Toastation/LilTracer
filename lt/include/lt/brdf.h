@@ -71,15 +71,6 @@ public:
      */
     virtual float pdf(const vec3& wi, const vec3& wo);
     
-    /**
-     * @brief Evaluates the BRDF * cos_theta_o / pdf.
-     * @param wi Incident direction.
-     * @param wo Outgoing direction.
-     * @return The evaluated spectrum.
-     */
-    virtual Spectrum eval_optim(vec3 wi, vec3 wo, Sampler& sampler);
-
-    
     Flags flags;
     inline bool is_emissive() {
         return static_cast<uint16_t>(flags) & static_cast<uint16_t>(Flags::emissive);
@@ -135,6 +126,8 @@ public:
     }
 
     Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
+    Sample sample(const vec3& wi, Sampler& sampler);
+    float pdf(const vec3& wi, const vec3& wo);
 
 protected:
     void link_params() { params.add("albedo", Params::Type::VEC3, &albedo); }
@@ -162,6 +155,7 @@ public:
 
     Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
 
+
 protected:
     void link_params()
     {
@@ -184,8 +178,6 @@ public:
         sample_visible_distribution = false;
     }
 
-
-    Float scale_wi(const vec3& wi) const;
     vec3 to_unit_space(const vec3& wi);
     vec3 to_transformed_space(const vec3& wi);
     
@@ -226,6 +218,9 @@ public:
     Spectrum eval(vec3 wi, vec3 wo, Sampler& sampler);
     Brdf::Sample sample(const vec3& wi, Sampler& sampler);
     Float pdf(const vec3& wi, const vec3& wo);
+
+    // Return eval / pdf
+    Spectrum eval_optim(vec3 wi, vec3 wo, Sampler& sampler);
 
     Spectrum eta;
     Spectrum kappa;
