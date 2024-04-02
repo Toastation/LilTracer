@@ -1,14 +1,43 @@
-/**
- * @file brdf.h
- * @brief Defines classes related to Bidirectional Reflectance Distribution
- * Functions (BRDFs).
- */
 
 #pragma once
 
 #include "brdf.h"
 
 namespace LT_NAMESPACE {
+
+class SphereMicrosurface {
+public:
+    Float D(const vec3& wh_u);
+    Float D(const vec3& wh_u, const vec3& wi_u);
+
+    Float pdf(const vec3& wh_u);
+    Float pdf(const vec3& wh_u, const vec3& wi_u);
+
+    vec3 sample_D(Sampler& sampler);
+    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
+    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
+
+    Float lambda(const vec3& wi_u);
+    Float G1(const vec3& wh_u, const vec3& wi_u);
+    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
+};
+
+class BeckmannMicrosurface {
+public:
+    Float D(const vec3& wh_u);
+    Float D(const vec3& wh_u, const vec3& wi_u);
+
+    Float pdf(const vec3& wh_u);
+    Float pdf(const vec3& wh_u, const vec3& wi_u);
+
+    vec3 sample_D(Sampler& sampler);
+    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
+
+    Float lambda(const vec3& wi_u);
+    Float G1(const vec3& wh_u, const vec3& wi_u);
+    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
+};
+
 
 template <class MICROSURFACE>
 class ShapeInvariantMicrosurface : public Brdf {
@@ -39,15 +68,94 @@ public:
     vec3 sample_D(Sampler& sampler);
     vec3 sample_D(const vec3& wi, Sampler& sampler);
     
-    // Implemented in child class
-    // Sample sample(const vec3& wi, Sampler& sampler);
-    // Spectrum eval(vec3 wi, vec3 wo) = 0;
-    // Float pdf(const vec3& wi, const vec3& wo);
+    //virtual Sample sample(const vec3& wi, Sampler& sampler) = 0;
+    //virtual Spectrum eval(vec3 wi, vec3 wo) = 0;
+    //virtual Float pdf(const vec3& wi, const vec3& wo) = 0;
 
     MICROSURFACE ms;
     bool sample_visible_distribution;
     bool optimize;
 };
+
+
+
+
+
+/////////////////////
+// ShapeInvariantMicrosurface<MICROSURFACE>
+///////////////////
+template <class MICROSURFACE>
+vec3 ShapeInvariantMicrosurface<MICROSURFACE>::to_unit_space(const vec3& wi)
+{
+    return glm::normalize(wi * scale);
+}
+
+template <class MICROSURFACE>
+vec3 ShapeInvariantMicrosurface<MICROSURFACE>::to_transformed_space(const vec3& wi)
+{
+    return glm::normalize(wi / scale);
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::G1(const vec3& wh, const vec3& wi)
+{
+    return ms.G1(to_transformed_space(wh), to_unit_space(wi));
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::G2(const vec3& wh, const vec3& wi, const vec3& wo)
+{
+    return G1(wh, wi) * G1(wh, wo);
+    return ms.G2(to_transformed_space(wh), to_unit_space(wi), to_unit_space(wo));
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh)
+{
+    Float det_m = 1. / std::abs(scale.x * scale.y);
+    vec3 wh_u = to_transformed_space(wh);
+    return ms.D(wh_u) * det_m * std::pow(wh_u.z / wh.z, 4.);
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(const vec3& wh)
+{
+    Float det_m = 1. / std::abs(scale.x * scale.y);
+    vec3 wh_u = to_transformed_space(wh);
+    return ms.pdf(wh_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::D(const vec3& wh, const vec3& wi)
+{
+    Float det_m = 1. / std::abs(scale.x * scale.y);
+    vec3 wh_u = to_transformed_space(wh);
+    vec3 wi_u = to_unit_space(wi);
+    return ms.D(wh_u, wi_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
+}
+
+template <class MICROSURFACE>
+Float ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(const vec3& wh, const vec3& wi)
+{
+    Float det_m = 1. / std::abs(scale.x * scale.y);
+    vec3 wh_u = to_transformed_space(wh);
+    vec3 wi_u = to_unit_space(wi);
+    return ms.pdf(wh_u, wi_u) * det_m * std::pow(wh_u.z / wh.z, 3.);
+}
+
+template <class MICROSURFACE>
+vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(Sampler& sampler)
+{
+    return to_unit_space(ms.sample_D(sampler));
+}
+
+template <class MICROSURFACE>
+vec3 ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(const vec3& wi, Sampler& sampler)
+{
+    return to_unit_space(ms.sample_D(to_unit_space(wi), sampler));
+}
+
+
 
 template <class MICROSURFACE>
 class RoughShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<MICROSURFACE> {
@@ -72,6 +180,67 @@ public:
 };
 
 
+/////////////////////
+// RoughShapeInvariantMicrosurface<MICROSURFACE>
+///////////////////
+
+template <class MICROSURFACE>
+Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    vec3 wh = glm::normalize(wi + wo);
+    Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
+    Float g = ShapeInvariantMicrosurface<MICROSURFACE>::G2(wh, wi, wo);
+    Spectrum f = fresnelConductor(glm::dot(wh, wi), eta, kappa);
+    Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
+    return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
+}
+
+template <class MICROSURFACE>
+Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval_optim(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    if (ShapeInvariantMicrosurface<MICROSURFACE>::optimize) {
+        return ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+            ? eval(wi, wo, sampler) / pdf(wi, wo)
+            : eval(wi, wo, sampler) / pdf(wi, wo);
+    }
+    return eval(wi, wo, sampler) / pdf(wi, wo);
+}
+
+
+template <class MICROSURFACE>
+Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
+{
+    Brdf::Sample bs;
+
+    vec3 wh = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(wi, sampler)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
+
+    bs.wo = glm::reflect(-wi, wh);
+
+    bs.value = eval_optim(wi, bs.wo, sampler);
+
+    //Float g = sample_visible_distribution ? G2(wh,wi, bs.wo)  / G1(wh,bs.wo) : G1(wh, wi) * G1(wh, bs.wo) * glm::dot(wi, wh) / (glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wh[2], 0.0001f, 0.9999f));
+    //bs.value = F * e;
+
+    return bs;
+}
+
+template <class MICROSURFACE>
+Float RoughShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
+{
+    vec3 wh = glm::normalize(wi + wo);
+
+    Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh, wi)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh);
+
+    return pdf_wh_ / (4. * glm::clamp(glm::dot(wh, wi), 0.0001f, 0.9999f));
+}
+
+
+
+
 template <class MICROSURFACE>
 class DiffuseShapeInvariantMicrosurface : public ShapeInvariantMicrosurface<MICROSURFACE> {
 public:
@@ -91,22 +260,52 @@ public:
 
 
 
-class SphereMicrosurface {
-public:
-    Float D(const vec3& wh_u);
-    Float D(const vec3& wh_u, const vec3& wi_u);
+/////////////////////
+// DiffuseShapeInvariantMicrosurface<MICROSURFACE>
+///////////////////
 
-    Float pdf(const vec3& wh_u);
-    Float pdf(const vec3& wh_u, const vec3& wi_u);
+template <class MICROSURFACE>
+Spectrum DiffuseShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, Sampler& sampler)
+{
+    vec3 wh = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(wi, sampler)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
 
-    vec3 sample_D(Sampler& sampler);
-    // Sampling method from Sampling Visible GGX Normals with Spherical Caps, Jonathan Dupuy, Anis Benyoub
-    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
+    Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+        ? ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh, wi)
+        : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wh);
 
-    Float lambda(const vec3& wi_u);
-    Float G1(const vec3& wh_u, const vec3& wi_u);
-    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
-};
+    Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
+    Float g = ShapeInvariantMicrosurface<MICROSURFACE>::G2(wh, wi, wo);
+
+    Float i_dot_m = glm::clamp(glm::dot(wi, wh), 0.00001f, 0.99999f);
+    Float o_dot_m = glm::clamp(glm::dot(wo, wh), 0.00001f, 0.99999f);
+    Float cos_theta_i = glm::clamp(wi[2], 0.00001f, 0.99999f);
+
+    Float brdf = i_dot_m * o_dot_m * d * g / pdf_wh_;
+    return albedo * brdf / cos_theta_i / pi;
+}
+
+
+template <class MICROSURFACE>
+Brdf::Sample DiffuseShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& wi, Sampler& sampler)
+{
+    Brdf::Sample bs;
+
+    bs.wo = square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
+    bs.value = eval(wi, bs.wo, sampler) / ShapeInvariantMicrosurface<MICROSURFACE>::pdf(wi, bs.wo);
+
+    return bs;
+}
+
+template <class MICROSURFACE>
+Float DiffuseShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
+{
+    return square_to_cosine_hemisphere_pdf(wo);
+}
+
+
+
 
 class RoughGGX : public RoughShapeInvariantMicrosurface<SphereMicrosurface> {
 public:
@@ -157,25 +356,6 @@ protected:
         params.add("albedo", Params::Type::VEC3, &albedo);
         params.add("sample_visible_distribution", Params::Type::BOOL, &sample_visible_distribution);
     }
-};
-
-
-
-
-class BeckmannMicrosurface {
-public:
-    Float D(const vec3& wh_u);
-    Float D(const vec3& wh_u, const vec3& wi_u);
-
-    Float pdf(const vec3& wh_u);
-    Float pdf(const vec3& wh_u, const vec3& wi_u);
-
-    vec3 sample_D(Sampler& sampler);
-    vec3 sample_D(const vec3& wi_u, Sampler& sampler);
-
-    Float lambda(const vec3& wi_u);
-    Float G1(const vec3& wh_u, const vec3& wi_u);
-    Float G2(const vec3& wh_u, const vec3& wi_u, const vec3& wo_u);
 };
 
 

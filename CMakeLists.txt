@@ -19,15 +19,15 @@ include(clang_format)
 # LilTracer library
 # ----------------------------------------------------------------------------
 
-add_subdirectory(lt)
-add_clang_format_target(format-liltracer lt)
+add_subdirectory(src)
+add_clang_format_target(format-liltracer src)
 
 # ----------------------------------------------------------------------------
 # Applications
 # ----------------------------------------------------------------------------
 
 add_subdirectory(apps/brdf_viewer)
-add_subdirectory(apps/renderer)
+add_subdirectory(apps/lil_tracer)
 add_subdirectory(apps/envmap_sampling)
 
 # ----------------------------------------------------------------------------
