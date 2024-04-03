@@ -10,9 +10,9 @@
 #include <lt/scene.h>
 #include <lt/sensor.h>
 #include <lt/serialize.h>
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_for.h>
-#include <tbb/task.h>
+//#include <tbb/blocked_range.h>
+//#include <tbb/parallel_for.h>
+//#include <tbb/task.h>
 
 #include <chrono>
 

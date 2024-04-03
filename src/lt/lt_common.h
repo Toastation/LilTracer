@@ -17,7 +17,7 @@ using vec3 = glm::vec3;
 
 using Spectrum = vec3;
 
-#define Float float
+using Float = float;
 
 const Float pi = 3.14159265359;
 

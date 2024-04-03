@@ -5,6 +5,8 @@ namespace LT_NAMESPACE {
 /////////////////////
 // Sensor Factory
 ///////////////////
+
+template<>
 Factory<Sensor>::CreatorRegistry& Factory<Sensor>::registry()
 {
     static Factory<Sensor>::CreatorRegistry registry{

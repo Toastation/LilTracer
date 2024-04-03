@@ -91,7 +91,7 @@ void AppInit(AppData& app_data) {
     for (int i = 0; i < app_data.nsample; i++) {
         lt::Light::Sample env_sample = app_data.envmap->sample(lt::SurfaceInteraction(), app_data.sampler);
         app_data.samples[i] = env_sample.direction;
-        Float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
+        float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
         phi = phi > 0. ? phi : 2 * lt::pi + phi;
         app_data.x[i] = phi / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
         app_data.y[i] = std::acos(app_data.samples[i].y) / lt::pi * (float)app_data.envmap->envmap.h;

@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "mix.h"
+#include "brdf.h"
+#include "lambert.h"
 
 namespace LT_NAMESPACE {
 
@@ -17,6 +18,9 @@ public:
     Mix() : Brdf("Mix")
     {
         link_params();
+        brdf1 = std::make_shared<Diffuse>(Spectrum(0.1, 0.5, 0.9));
+        brdf2 = std::make_shared<Diffuse>(Spectrum(0.9, 0.5, 0.1));
+        weight = 0.5;
     }
 
     void init() {

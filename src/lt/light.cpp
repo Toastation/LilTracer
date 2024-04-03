@@ -2,6 +2,7 @@
 
 namespace LT_NAMESPACE {
 
+template<>
 Factory<Light>::CreatorRegistry& Factory<Light>::registry()
 {
     static Factory<Light>::CreatorRegistry registry {

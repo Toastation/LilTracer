@@ -2,6 +2,7 @@
 
 namespace LT_NAMESPACE {
 
+template<>
 Factory<Geometry>::CreatorRegistry& Factory<Geometry>::registry()
 {
     static Factory<Geometry>::CreatorRegistry registry {

@@ -9,6 +9,7 @@ namespace LT_NAMESPACE {
     /////////////////////
     // Brdf Factory
     ///////////////////
+    template<>
     Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
     {
         static Factory<Brdf>::CreatorRegistry registry{

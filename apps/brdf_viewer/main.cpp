@@ -318,6 +318,52 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
 }
 
 
+static void draw_param_gui(const std::shared_ptr<lt::Brdf>& brdf,std::string prev="") {
+
+    for (int i = 0; i < brdf->params.count; i++) {
+        std::string param_name = prev + " " + brdf->params.names[i];
+        switch (brdf->params.types[i])
+        {
+        case lt::Params::Type::BOOL:
+            NEED_RESET(ImGui::Checkbox(param_name.c_str(), (bool*)brdf->params.ptrs[i]));
+            break;
+        case lt::Params::Type::FLOAT:
+            NEED_RESET(ImGui::DragFloat(param_name.c_str(), (float*)brdf->params.ptrs[i], 0.01, 0.001, 3.));
+            break;
+        case lt::Params::Type::VEC3:
+            NEED_RESET(ImGui::ColorEdit3(param_name.c_str(), (float*)brdf->params.ptrs[i]));
+            break;
+        case lt::Params::Type::IOR:
+            NEED_RESET(ImGui::DragFloat3(param_name.c_str(), (float*)brdf->params.ptrs[i], 0.01, 0.5, 10.));
+            break;
+        case lt::Params::Type::SH:
+            if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
+            {
+                std::vector<float>* sh = (std::vector<float>*)brdf->params.ptrs[i];
+                ImGui::TableSetupColumn("num");
+                ImGui::TableSetupColumn("val");
+                ImGui::TableHeadersRow();
+
+                for (int j = 0; j < sh->size(); j++) {
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%d", j);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%f", sh->at(j));
+                }
+
+                ImGui::EndTable();
+            }
+            break;
+        case lt::Params::Type::BRDF:
+            draw_param_gui(*((std::shared_ptr<lt::Brdf>*)brdf->params.ptrs[i]),param_name);
+            break;
+        default:
+            break;
+        }
+    }
+
+}
+
 
 static void AppLayout(GLFWwindow* window, AppData& app_data)
 {
@@ -377,43 +423,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             
             std::shared_ptr<lt::Brdf> cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
 
-            for (int i = 0; i < cur_brdf->params.count; i++) {
-                switch (cur_brdf->params.types[i])
-                {
-                case lt::Params::Type::BOOL:
-                    NEED_RESET(ImGui::Checkbox(cur_brdf->params.names[i].c_str(), (bool*)cur_brdf->params.ptrs[i]));
-                    break;
-                case lt::Params::Type::FLOAT:
-                    NEED_RESET(ImGui::DragFloat(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i], 0.01,0.001,3.));
-                    break;
-                case lt::Params::Type::VEC3:
-                    NEED_RESET(ImGui::ColorEdit3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i]));
-                    break;
-                case lt::Params::Type::IOR:
-                    NEED_RESET(ImGui::DragFloat3(cur_brdf->params.names[i].c_str(), (float*)cur_brdf->params.ptrs[i],0.01,0.5,10.));
-                    break;
-                case lt::Params::Type::SH:
-                    if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
-                    {
-                        std::vector<float>* sh = (std::vector<float>*)cur_brdf->params.ptrs[i];
-                        ImGui::TableSetupColumn("num");
-                        ImGui::TableSetupColumn("val");
-                        ImGui::TableHeadersRow();
-                        
-                        for(int j = 0; j < sh->size(); j++){
-                            ImGui::TableNextColumn();
-                            ImGui::Text("%d", j);
-                            ImGui::TableNextColumn();
-                            ImGui::Text("%f", sh->at(j));
-                        }
-
-                        ImGui::EndTable();
-                    }
-                    break;
-                default:
-                    break;
-                }
-            }
+            draw_param_gui(cur_brdf);
             
             ImGui::EndChild();
 

@@ -2,6 +2,7 @@
 
 namespace LT_NAMESPACE {
 
+template<>
 Factory<Camera>::CreatorRegistry& Factory<Camera>::registry()
 {
     static Factory<Camera>::CreatorRegistry registry {

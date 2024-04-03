@@ -1,7 +1,8 @@
 #include <lt/integrator.h>
 
 namespace LT_NAMESPACE {
-
+    
+template<>
 Factory<Integrator>::CreatorRegistry& Factory<Integrator>::registry()
 {
     static Factory<Integrator>::CreatorRegistry registry {
