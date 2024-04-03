@@ -7,8 +7,11 @@
 #include <lt/brdf/lambert.h>
 #include <lt/brdf/emissive.h>
 #include <lt/brdf/test.h>
-#include <lt/brdf/shape_invariant.h>
+#include <lt/brdf/ggx.h>
+#include <lt/brdf/beckmann.h>
 #include <lt/brdf/mix.h>
+
+#include <lt/sensor.h>
 
 namespace LT_NAMESPACE {
 	
@@ -20,6 +23,7 @@ namespace LT_NAMESPACE {
         static int number_of_theta;
 
         std::vector<Float> directional_albedo;
+        std::vector<Float> thetas;
         bool energy_conservative; // all  directionnal_albedo <  1
         bool correct_sampling;    // sample = pdf
         bool reciprocity;
@@ -34,47 +38,117 @@ namespace LT_NAMESPACE {
             negative_value(false)
         {}
 
-        static BrdfValidation validate(const Brdf& brdf) {
+        static BrdfValidation validate(Brdf& brdf) {
             std::cout << "validate " << brdf.type << std::endl;
 
-            // Compute directional albedo
+            BrdfValidation validation;
+            validation.directional_albedo.resize(number_of_sample);
 
-                // Check if there is negative values
-
-
-            // Check if all directional albedo are < 1 (energy conservative)
+            validation.thetas = lt::linspace<float>(0, 0.5 * lt::pi, number_of_theta);
 
 
-            // Test specific directions to found nan
-            // wi = wo
+            for (int i = 0; i < number_of_theta; i++) {
+            
+                    // Check if there is negative values
 
 
-            // Test reciprocity
+                // Check if all directional albedo are < 1 (energy conservative)
 
 
-            // Test sampling
+                // Test specific directions to found nan
+                // wi = wo
 
 
-            //float dtheta = 0.5 * lt::pi / app_data.s_brdf_sampling->h;
-            //float dphi = 2. * lt::pi / app_data.s_brdf_sampling->w;
-            //float sum_1 = 0.;
-            //float sum_2 = 0.;
-            //float sum_3 = 0.;
-            //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
-            //    for (int y = 0; y < app_data.s_brdf_sampling_pdf->h; y++) {
-            //        lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
-            //        float theta = 0.5 * lt::pi * (float(y) + 0.5) / app_data.s_brdf_sampling_pdf->h;
-            //        sum_1 += app_data.s_brdf_sampling->get(x, y).x * std::sin(theta) * dtheta * dphi;
-            //        sum_2 += app_data.s_brdf_sampling_pdf->get(x, y).x * std::sin(theta) * dtheta * dphi;
-            //        sum_3 += lt::square_to_cosine_hemisphere_pdf(wo) * std::sin(theta) * dtheta * dphi;
-            //    }
-            //}
+                // Test reciprocity
 
-            //std::cout << sum_1 << std::endl;
-            //std::cout << sum_2 << std::endl;
-            //std::cout << sum_3 << std::endl;
 
-            return BrdfValidation();
+                // Test sampling
+
+                Float theta_i = validation.thetas[i];
+                Float phi_i = 0.;
+                int res_theta_sampling = 64;
+                int res_phi_sampling = 4 * res_theta_sampling;
+            
+                std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, res_theta_sampling);
+                std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, res_phi_sampling);
+
+                Sensor brdf_buf(res_phi_sampling, res_theta_sampling);
+                brdf_buf.init();
+
+                HemisphereSensor accu_buf(res_phi_sampling, res_theta_sampling);
+                accu_buf.init();
+
+                Sensor pdf_buf(res_phi_sampling, res_theta_sampling);
+                pdf_buf.init();
+
+                Sensor diff_buf(res_phi_sampling, res_theta_sampling);
+                diff_buf.init();
+
+                lt::vec3 wi = lt::polar_to_card(theta_i, phi_i);
+
+                Sampler sampler;
+
+                for (int j = 0; j < number_of_sample; j++) {
+                    Brdf::Sample sample = brdf.sample(wi, sampler);
+                    vec3 wo = sample.wo;
+                    float phi = std::atan2(wo.y, wo.x);
+                    phi = phi < 0 ? 2 * lt::pi + phi : phi;
+                    float x = phi / (2. * lt::pi) * (float)res_phi_sampling;
+                    float y = std::acos(wo.z) / (0.5 * lt::pi) * (float)res_theta_sampling;
+                    if (y < res_theta_sampling){
+                        accu_buf.add(int(x), int(y), lt::Spectrum(1));
+                    }
+                    else{
+                        accu_buf.sum_counts++;
+                    }
+                }
+
+
+                for (int j = 0; j < number_of_sample; j++) {
+                    lt::vec3 wo = lt::square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
+                    float phi = std::atan2(wo.y, wo.x);
+                    phi = phi < 0 ? 2 * lt::pi + phi : phi;
+                    int x = int(phi / (2. * lt::pi) * (float)res_phi_sampling);
+                    int y = int(std::acos(wo.z) / (0.5 * lt::pi) * (float)res_theta_sampling);
+
+                    if (y < res_theta_sampling) {
+                        brdf_buf.add(x, y, brdf.eval(wi, wo, sampler));
+                        pdf_buf.add(x, y, lt::Spectrum(brdf.pdf(wi, wo)));
+                        diff_buf.set(x, y, (pdf_buf.get(x, y) - accu_buf.get(x, y)));
+                    }
+                    else {
+                        brdf_buf.sum_counts++;
+                        pdf_buf.sum_counts++;
+                        diff_buf.sum_counts++;
+                    }
+                }
+
+
+                float dtheta = 0.5 * lt::pi / res_theta_sampling;
+                float dphi = 2. * lt::pi / res_phi_sampling;
+                float sum_diff = 0.;
+                float sum_brdf = 0.;
+                
+                for (int x = 0; x < res_phi_sampling; x++) {
+                    for (int y = 0; y < res_theta_sampling; y++) {
+                        lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
+                        float theta = 0.5 * lt::pi * (float(y) + 0.5) / res_theta_sampling;
+                        sum_diff += diff_buf.get(x, y).x * std::sin(theta) * dtheta * dphi;
+                        sum_brdf += brdf_buf.get(x, y).x * std::sin(theta) * dtheta * dphi;
+                    }
+                }
+
+                
+                Spectrum a = brdf_buf.get(0, 0);
+                Spectrum b = brdf_buf.get(0, res_theta_sampling - 1);
+                Spectrum c = brdf_buf.get(res_phi_sampling - 1, 0);
+                Spectrum d = brdf_buf.get(res_phi_sampling - 1, res_theta_sampling - 1);
+
+                validation.directional_albedo[i] = sum_brdf;
+            }
+
+
+            return validation;
         }
     };
 

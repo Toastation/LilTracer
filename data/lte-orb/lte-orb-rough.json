@@ -19,13 +19,13 @@
       "name": "mat",
       "rough_x": 0.25,
       "rough_y": 0.25,
-      "sample_visible_distribution" : true
+      "sample_visible_distribution" : false
     }
   ],
   "background": {
     "type": "EnvironmentLight",
-    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
-    "intensity": 0.5
+    "texture": "../envmaps/hallstatt4_hd.exr",
+    "intensity": 1.0
   },
   "nlight": [
     {
@@ -68,13 +68,13 @@
   ],
   "sensor": {
     "type": "Sensor",
-    "width": 1080,
+    "width": 720,
     "height": 720
   },
   "camera": {
     "type": "PerspectiveCamera",
     "fov": 40,
-    "aspect": 1.5,
+    "aspect": 1.0,
     "center": [ 0.0, 0.1, 0.0 ],
     "pos": [ -0.118722, 0.415848, -0.491901 ]
   }

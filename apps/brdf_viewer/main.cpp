@@ -701,7 +701,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 {
                     
                     if (ImGui::Button("Run validation of current brdf model")) {
-                        lt::BrdfValidation::validate(*app_data.brdfs[app_data.current_brdf_idx]);
+                        app_data.validation = lt::BrdfValidation::validate(*app_data.brdfs[app_data.current_brdf_idx]);
                     }
 
                     ImGui::SameLine();
@@ -732,6 +732,24 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.energy_conservative ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
                     ImGui::Text("Reciprocity");
                     ImGui::PopStyleColor();
+
+                    if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
+                    {
+                        ImGui::TableSetupColumn("Theta");
+                        ImGui::TableSetupColumn("Albedo");
+                        ImGui::TableHeadersRow();
+
+                        for (int j = 0; j < app_data.validation.thetas.size(); j++)
+                        {
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f", app_data.validation.thetas[j]);
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%f", app_data.validation.directional_albedo[j]);
+                        }
+
+                        ImGui::EndTable();
+                    }
+
 
                     ImGui::EndTabItem();
                 }

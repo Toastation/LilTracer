@@ -5,10 +5,10 @@ namespace LT_NAMESPACE {
     int BrdfValidation::number_of_theta = 90;
     int BrdfValidation::number_of_sample = 10000;
 
-
     /////////////////////
     // Brdf Factory
     ///////////////////
+
     template<>
     Factory<Brdf>::CreatorRegistry& Factory<Brdf>::registry()
     {
