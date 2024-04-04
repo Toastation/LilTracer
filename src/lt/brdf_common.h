@@ -22,8 +22,9 @@ namespace LT_NAMESPACE {
         static int number_of_sample;
         static int number_of_theta;
 
-        std::vector<Float> directional_albedo;
         std::vector<Float> thetas;
+        std::vector<Float> directional_albedo;
+        std::vector<Float> sampling_difference;
         bool energy_conservative; // all  directionnal_albedo <  1
         bool correct_sampling;    // sample = pdf
         bool reciprocity;
@@ -42,8 +43,8 @@ namespace LT_NAMESPACE {
             std::cout << "validate " << brdf.type << std::endl;
 
             BrdfValidation validation;
-            validation.directional_albedo.resize(number_of_sample);
-
+            validation.directional_albedo.resize(number_of_theta);
+            validation.sampling_difference.resize(number_of_theta);
             validation.thetas = lt::linspace<float>(0, 0.5 * lt::pi, number_of_theta);
 
 
@@ -66,14 +67,11 @@ namespace LT_NAMESPACE {
 
                 Float theta_i = validation.thetas[i];
                 Float phi_i = 0.;
-                int res_theta_sampling = 64;
+                int res_theta_sampling = 8;
                 int res_phi_sampling = 4 * res_theta_sampling;
             
                 std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, res_theta_sampling);
                 std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, res_phi_sampling);
-
-                Sensor brdf_buf(res_phi_sampling, res_theta_sampling);
-                brdf_buf.init();
 
                 HemisphereSensor accu_buf(res_phi_sampling, res_theta_sampling);
                 accu_buf.init();
@@ -87,7 +85,7 @@ namespace LT_NAMESPACE {
                 lt::vec3 wi = lt::polar_to_card(theta_i, phi_i);
 
                 Sampler sampler;
-
+                Float directional_albedo = Float(0.);
                 for (int j = 0; j < number_of_sample; j++) {
                     Brdf::Sample sample = brdf.sample(wi, sampler);
                     vec3 wo = sample.wo;
@@ -97,11 +95,14 @@ namespace LT_NAMESPACE {
                     float y = std::acos(wo.z) / (0.5 * lt::pi) * (float)res_theta_sampling;
                     if (y < res_theta_sampling){
                         accu_buf.add(int(x), int(y), lt::Spectrum(1));
+                        directional_albedo += sample.value.x;
                     }
                     else{
                         accu_buf.sum_counts++;
                     }
                 }
+
+                directional_albedo /= number_of_sample;
 
 
                 for (int j = 0; j < number_of_sample; j++) {
@@ -112,12 +113,10 @@ namespace LT_NAMESPACE {
                     int y = int(std::acos(wo.z) / (0.5 * lt::pi) * (float)res_theta_sampling);
 
                     if (y < res_theta_sampling) {
-                        brdf_buf.add(x, y, brdf.eval(wi, wo, sampler));
                         pdf_buf.add(x, y, lt::Spectrum(brdf.pdf(wi, wo)));
                         diff_buf.set(x, y, (pdf_buf.get(x, y) - accu_buf.get(x, y)));
                     }
                     else {
-                        brdf_buf.sum_counts++;
                         pdf_buf.sum_counts++;
                         diff_buf.sum_counts++;
                     }
@@ -127,24 +126,24 @@ namespace LT_NAMESPACE {
                 float dtheta = 0.5 * lt::pi / res_theta_sampling;
                 float dphi = 2. * lt::pi / res_phi_sampling;
                 float sum_diff = 0.;
-                float sum_brdf = 0.;
                 
                 for (int x = 0; x < res_phi_sampling; x++) {
                     for (int y = 0; y < res_theta_sampling; y++) {
                         lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
                         float theta = 0.5 * lt::pi * (float(y) + 0.5) / res_theta_sampling;
                         sum_diff += diff_buf.get(x, y).x * std::sin(theta) * dtheta * dphi;
-                        sum_brdf += brdf_buf.get(x, y).x * std::sin(theta) * dtheta * dphi;
                     }
                 }
 
-                
-                Spectrum a = brdf_buf.get(0, 0);
-                Spectrum b = brdf_buf.get(0, res_theta_sampling - 1);
-                Spectrum c = brdf_buf.get(res_phi_sampling - 1, 0);
-                Spectrum d = brdf_buf.get(res_phi_sampling - 1, res_theta_sampling - 1);
 
-                validation.directional_albedo[i] = sum_brdf;
+                //for (int y = 0; y < res_theta_sampling; y++) {
+                //    for (int x = 0; x < res_phi_sampling; x++) {
+                //        std::cout << brdf_buf.get(x, y).x << " ";
+                //    }
+                //    std::cout << std::endl;
+                //}
+                validation.sampling_difference[i] = sum_diff;
+                validation.directional_albedo[i] = directional_albedo;
             }
 
 

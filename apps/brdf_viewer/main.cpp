@@ -733,21 +733,17 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     ImGui::Text("Reciprocity");
                     ImGui::PopStyleColor();
 
-                    if (ImGui::BeginTable("table", 2, ImGuiTableFlags_Borders))
-                    {
-                        ImGui::TableSetupColumn("Theta");
-                        ImGui::TableSetupColumn("Albedo");
-                        ImGui::TableHeadersRow();
+                    if (ImPlot::BeginPlot("Directional albedo", "theta", "albedo", ImVec2(-1, 0), 0, ImPlotAxisFlags_Lock, ImPlotAxisFlags_Lock)) {
+                        ImPlot::SetupAxisLimits(ImAxis_Y1, -0.1, 1.1);
+                        ImPlot::SetupAxisLimits(ImAxis_X1, 0, lt::pi / 2.);
+                        ImPlot::PlotStems("", app_data.validation.thetas.data(), app_data.validation.directional_albedo.data(), app_data.validation.thetas.size(), 0.);
+                        ImPlot::EndPlot();
+                    }
 
-                        for (int j = 0; j < app_data.validation.thetas.size(); j++)
-                        {
-                            ImGui::TableNextColumn();
-                            ImGui::Text("%f", app_data.validation.thetas[j]);
-                            ImGui::TableNextColumn();
-                            ImGui::Text("%f", app_data.validation.directional_albedo[j]);
-                        }
-
-                        ImGui::EndTable();
+                    if (ImPlot::BeginPlot("Sampling difference", "theta", "mean signed difference", ImVec2(-1, 0), 0, ImPlotAxisFlags_Lock, ImPlotAxisFlags_AutoFit)) {
+                        ImPlot::SetupAxisLimits(ImAxis_X1, 0, lt::pi / 2.);
+                        ImPlot::PlotStems("", app_data.validation.thetas.data(), app_data.validation.sampling_difference.data(), app_data.validation.thetas.size(), 0.);
+                        ImPlot::EndPlot();
                     }
 
 
