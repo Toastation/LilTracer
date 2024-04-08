@@ -147,10 +147,23 @@ public:
     {
         Spectrum mean = acculumator[idx] / (Float)count[idx];
         value[idx] = acculumator_sqr[idx] / (Float)count[idx] - mean * mean;
+        value[idx] = value[idx] / ((Float)count[idx] - 1);
         assert(value[idx] == value[idx]);
     }
 
+    void use_variance(const bool& mode ) {
+        if (mode) {
+            for (int i = 0; i < acculumator.size(); i++)
+                set_value(i, 0);
+        }
+        else {
+            for (int i = 0; i < acculumator.size(); i++)
+                value[i] = acculumator[i] / (Float)count[i];
+        }
+    }
+
     std::vector<Spectrum> acculumator_sqr;
+    
 
 };
 
