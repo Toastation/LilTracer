@@ -68,7 +68,7 @@ Float ShapeInvariantMicrosurface<MICROSURFACE>::G1(const vec3& wh, const vec3& w
 template <class MICROSURFACE>
 Float ShapeInvariantMicrosurface<MICROSURFACE>::G2(const vec3& wh, const vec3& wi, const vec3& wo)
 {
-    return G1(wh, wi) * G1(wh, wo);
+    //return G1(wh, wi) * G1(wh, wo);
     return ms.G2(to_transformed_space(wh), to_unit_space(wi), to_unit_space(wo));
 }
 
@@ -179,6 +179,8 @@ Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& w
         : ShapeInvariantMicrosurface<MICROSURFACE>::sample_D(sampler);
 
     bs.wo = glm::reflect(-wi, wh);
+    //bs.wo = wh;
+
 
     bs.value = eval_optim(wi, bs.wo, sampler);
 
@@ -191,6 +193,13 @@ Brdf::Sample RoughShapeInvariantMicrosurface<MICROSURFACE>::sample(const vec3& w
 template <class MICROSURFACE>
 Float RoughShapeInvariantMicrosurface<MICROSURFACE>::pdf(const vec3& wi, const vec3& wo)
 {
+
+    //Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution
+    //    ? ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wo, wi)
+    //    : ShapeInvariantMicrosurface<MICROSURFACE>::pdf_wh(wo);
+
+    //return pdf_wh_;
+
     vec3 wh = glm::normalize(wi + wo);
 
     Float pdf_wh_ = ShapeInvariantMicrosurface<MICROSURFACE>::sample_visible_distribution

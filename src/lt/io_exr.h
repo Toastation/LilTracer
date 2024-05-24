@@ -4,10 +4,19 @@
 #include <lt/texture.h>
 #include <tiny_exr/tinyexr.h>
 
+#include <filesystem>
+
 namespace LT_NAMESPACE {
 
 static int save_sensor_exr(const Sensor& sen, const std::string& filename)
 {
+    namespace fs = std::filesystem;
+    fs::path p(filename);
+    fs::path d = p.parent_path();
+    if (!fs::is_directory(d) || !fs::exists(d)) { // Check if src folder exists
+        fs::create_directories(d); // create src folder
+    }
+
     const char* err;
     int ret = SaveEXR((float*)sen.value.data(), sen.w, sen.h, 3, 0,
         filename.c_str(), &err);
@@ -15,7 +24,7 @@ static int save_sensor_exr(const Sensor& sen, const std::string& filename)
         fprintf(stderr, "Save EXR err: %s\n", err);
         return ret;
     }
-    printf("Saved exr file. [ %s ] \n", filename.c_str());
+    //printf("Saved exr file. [ %s ] \n", filename.c_str());
 
     return 0;
 };

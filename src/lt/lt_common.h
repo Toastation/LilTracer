@@ -13,7 +13,8 @@
 
 namespace LT_NAMESPACE {
 
-using vec3 = glm::vec3;
+    using vec3 = glm::vec3;
+    using vec2 = glm::vec2;
 
 using Spectrum = vec3;
 
@@ -22,7 +23,7 @@ using Float = float;
 const Float pi = 3.14159265359;
 
 template <typename T>
-inline std::vector<T> linspace(T start, T end, size_t size)
+inline std::vector<T> linspace(T start, T end, size_t size, bool centered = true)
 {
     std::vector<T> arr;
     arr.resize(size);
@@ -32,10 +33,16 @@ inline std::vector<T> linspace(T start, T end, size_t size)
         return { start };
 
     //T delta = (end - start) / (size - 1);
-    T delta = (end - start) / size;
-    for (size_t i = 0; i < size; i++)
-        arr[i] = start + delta * i + delta * 0.5;
-
+    if (centered) {
+        T delta = (end - start) / size;
+        for (size_t i = 0; i < size; i++)
+            arr[i] = start + delta * i + delta * 0.5;
+    }
+    else {
+        T delta = (end - start) / (size - 1);
+        for (size_t i = 0; i < size; i++)
+            arr[i] = start + delta * i;
+    }
     return arr;
 }
 
@@ -137,6 +144,74 @@ inline glm::mat3 build_tbn_from_w(const vec3& w)
     vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
     vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
     return glm::mat3(tangent, bitangent, normal);
+}
+
+//template <class T>
+//int binary_search(const std::vector<T>& arr, const T& u) {
+//
+//    int left = 0;
+//    int right = arr.size() - 1;
+//    int i = 1000;
+//
+//    while ((left <= right) && (i > 0))
+//    {
+//        int mid = left + (right - left) / 2;
+//
+//        if (arr[mid] <= u) {
+//            if (arr[mid + 1] >= u)
+//            {
+//                return mid;
+//            }
+//            else
+//            {
+//                left = mid + 1;
+//            }
+//        }
+//        else
+//        {
+//            right = mid - 1;
+//        }
+//
+//    }
+//    return left;
+//    //return -1;
+//
+//}
+
+
+
+template <class T>
+int binary_search(const T* arr, const T& val, const int& size) {
+    // edge case: value of smaller than min or larger than max
+    if (arr[0] >= val) return 0;
+    if (arr[size - 1] <= val) return size - 1;
+
+    int start = 0;
+    int end = size - 1;
+
+    //while (start <= end) {
+    while (end - start >= 1) {
+        int mid = (end + start) / 2;
+
+        // value is in interval from previous to current element
+        if (val >= arr[mid] && val <= arr[mid+1]) {
+            return mid ;
+        }
+        else {
+            if (arr[mid] < val) {
+                start = mid;
+            }
+            else {
+                end = mid;
+            }
+        }
+    }
+    return -1;
+}
+
+template <class T>
+int binary_search(const std::vector<T>& arr, const T& val) {
+    return binary_search<T>(arr.data(), val, arr.size());
 }
 
 } // namespace LT_NAMESPACE

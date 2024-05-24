@@ -10,6 +10,7 @@
 #include <lt/brdf/ggx.h>
 #include <lt/brdf/beckmann.h>
 #include <lt/brdf/mix.h>
+#include <lt/brdf/micrograin.h>
 
 #include <lt/sensor.h>
 
@@ -67,7 +68,7 @@ namespace LT_NAMESPACE {
 
                 Float theta_i = validation.thetas[i];
                 Float phi_i = 0.;
-                int res_theta_sampling = 8;
+                int res_theta_sampling = 64;
                 int res_phi_sampling = 4 * res_theta_sampling;
             
                 std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, res_theta_sampling);

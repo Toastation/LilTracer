@@ -61,7 +61,7 @@ struct RenderSensor {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT); // we're not using the stencil buffer now
         glDisable(GL_DEPTH_TEST);
-        
+
         glUseProgram(shader_id);
         glUniform1i(glGetUniformLocation(shader_id, "type"), (int)type);
         glBindVertexArray(quadVAO);
@@ -130,7 +130,7 @@ struct RenderSensor {
             "layout(location = 1) in vec2 aTexCoords;\n"
             "out vec2 TexCoords;\n"
             "void main()\n"
-        
+
             "{\n"
             "    TexCoords = aTexCoords;\n"
             "    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
@@ -151,28 +151,28 @@ struct RenderSensor {
             "   else\n"
             "       FragColor = vec4(vec3(coolwarm(clamp(col.x,-0.5,0.5)+0.5)), 1.0);\n"
             "}";
-        
+
         unsigned int vertex, fragment;
         // vertex shader
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vShaderCode, NULL);
         glCompileShader(vertex);
-        
+
         // fragment Shader
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fragment, 1, &fShaderCode, NULL);
         glCompileShader(fragment);
-        
+
         // shader Program
         shader_id = glCreateProgram();
         glAttachShader(shader_id, vertex);
         glAttachShader(shader_id, fragment);
         glLinkProgram(shader_id);
-        
+
         // delete the shaders as they're linked into our program now and no longer necessary
         glDeleteShader(vertex);
         glDeleteShader(fragment);
-        
+
 
         initialized = true;
         return true;
@@ -224,14 +224,14 @@ void AppInit(AppData& app_data) {
 
     app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create("Diffuse"));
     app_data.current_brdf_idx = 0;
-    
+
     lt::dir_light(app_data.scn_dir_light, app_data.ren_dir_light);
     app_data.rsen_dir_light.sensor = app_data.ren_dir_light.sensor;
     app_data.rsen_dir_light.initialize();
     app_data.rsen_dir_light.type = RenderSensor::Type::Spectrum;
     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[app_data.current_brdf_idx];
 
-    lt::generate_from_path("../../../data/lte-orb/lte-orb.json",app_data.scn_glo_ill, app_data.ren_glo_ill);
+    lt::generate_from_path("../../../data/lte-orb/lte-orb.json", app_data.scn_glo_ill, app_data.ren_glo_ill);
     app_data.rsen_glo_ill.sensor = app_data.ren_glo_ill.sensor;
     app_data.rsen_glo_ill.initialize();
     app_data.rsen_glo_ill.type = RenderSensor::Type::Spectrum;
@@ -276,8 +276,8 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
 
 #if 1
     std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, sensor->h);
-    std::vector<float> ph = lt::linspace<float>(0, 2.  * lt::pi, sensor->w);
-    
+    std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, sensor->w);
+
     lt::vec3 wi = lt::polar_to_card(th_i, ph_i);
     for (int x = 0; x < sensor->w; x++) {
         for (int y = 0; y < sensor->h; y++) {
@@ -304,14 +304,14 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
             float cos_ph = std::cos(ph);
 
             lt::vec3 wd = lt::polar_to_card(th_d[y], 0);
-            lt::vec3 wi = lt::vec3(cos_th_h * wd.x + sin_th_h * wd.z, 0.,-sin_th_h * wd.x + cos_th_h * wd.z);
+            lt::vec3 wi = lt::vec3(cos_th_h * wd.x + sin_th_h * wd.z, 0., -sin_th_h * wd.x + cos_th_h * wd.z);
             wi = lt::vec3(cos_ph * wi.x + sin_ph * wi.y, -sin_ph * wi.x + cos_ph * wi.y, wi.z);
 
             lt::vec3 wh = lt::polar_to_card(th_h[x], 0.);
-            
+
             lt::vec3 wo = glm::reflect(-wi, wh);
-         
-            sensor->value[y * sensor->w + x] = glm::pow(brdf->eval(wi, wo),lt::vec3(0.4545));
+
+            sensor->value[y * sensor->w + x] = glm::pow(brdf->eval(wi, wo), lt::vec3(0.4545));
         }
     }
 #endif
@@ -321,7 +321,7 @@ void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::sha
 static void draw_param_gui(const std::shared_ptr<lt::Brdf>& brdf,std::string prev="") {
 
     for (int i = 0; i < brdf->params.count; i++) {
-        std::string param_name = prev + " " + brdf->params.names[i];
+        std::string param_name = brdf->params.names[i] + "##" + prev ;
         switch (brdf->params.types[i])
         {
         case lt::Params::Type::BOOL:
@@ -355,7 +355,10 @@ static void draw_param_gui(const std::shared_ptr<lt::Brdf>& brdf,std::string pre
             }
             break;
         case lt::Params::Type::BRDF:
+            ImGui::Separator();
+            ImGui::Text(brdf->params.names[i].c_str());
             draw_param_gui(*((std::shared_ptr<lt::Brdf>*)brdf->params.ptrs[i]),param_name);
+            ImGui::Separator();
             break;
         default:
             break;
@@ -371,7 +374,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     glfwGetWindowSize(window, &width, &height);
     ImGui::SetNextWindowSize(ImVec2(width, height)); // ensures ImGui fits the GLFW window
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    
+
 
     if (need_reset) {
         app_data.ren_glo_ill.reset();
@@ -385,12 +388,12 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     bool open = true;
     if (ImGui::Begin("Simple layout", &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
     {
-        
+
         {
             ImGui::BeginGroup();
-            
-            ImGui::BeginChild("top pane", ImVec2(250, ImGui::GetContentRegionAvail().y*0.25),true);
-            
+
+            ImGui::BeginChild("top pane", ImVec2(250, ImGui::GetContentRegionAvail().y * 0.25), true);
+
 
             const std::vector<std::string>& brdf_names = lt::Factory<lt::Brdf>::names();
 
@@ -404,12 +407,12 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                         app_data.brdfs.push_back(lt::Factory<lt::Brdf>::create(brdf_names[i]));
                 ImGui::EndPopup();
             }
-             
+
             ImGui::Separator();
 
             for (int i = 0; i < app_data.brdfs.size(); i++)
             {
-                if (ImGui::Selectable( (app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
+                if (ImGui::Selectable((app_data.brdfs[i]->type + "##" + std::to_string(app_data.brdfs[i]->id)).c_str(), app_data.current_brdf_idx == i)) {
                     app_data.current_brdf_idx = i;
                     app_data.scn_dir_light.geometries[0]->brdf = app_data.brdfs[i];
                     app_data.scn_glo_ill.geometries[1]->brdf = app_data.brdfs[i];
@@ -420,7 +423,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
             ImGui::EndChild();
             ImGui::BeginChild("bottom pane", ImVec2(250, 0), true);
-            
+
             std::shared_ptr<lt::Brdf> cur_brdf = app_data.brdfs[app_data.current_brdf_idx];
 
             draw_param_gui(cur_brdf);
@@ -436,8 +439,8 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
         // Right
         {
             ImGui::BeginGroup();
-            ImGui::BeginChild("item view", ImVec2(0, ImGui::GetWindowHeight()*0.9),true); // Leave room for 1 line below us
-            
+            ImGui::BeginChild("item view", ImVec2(0, ImGui::GetWindowHeight() * 0.9), true); // Leave room for 1 line below us
+
             if (ImGui::BeginTabBar("##Tabs", ImGuiTabBarFlags_None))
             {
                 if (ImGui::BeginTabItem("BRDF slice"))
@@ -447,15 +450,15 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                     brdf_slice(cur_brdf, app_data.theta_i, app_data.phi_i, app_data.s_brdf_slice, app_data.sampler);
                     app_data.rs_brdf_slice.update_data();
-                 
-                    if(ImPlot::BeginPlot("##image","","",ImVec2(-1,0),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
-                        
+
+                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, 0), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+
                         ImPlot::PlotImage("BRDF slice", (ImTextureID)app_data.rs_brdf_slice.id(), ImVec2(0, 0), ImVec2(app_data.s_brdf_slice->w, app_data.s_brdf_slice->h));
                         ImPlot::EndPlot();
                     }
                     ImGui::EndTabItem();
                 }
-                
+
                 if (ImGui::BeginTabItem("Plot"))
                 {
                     if (ImGui::BeginTabBar("##TabsPolar", ImGuiTabBarFlags_None))
@@ -539,7 +542,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                                         static float xs[1001];
                                         for (int x = 0; x < 1001; x++) {
-                                            lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                            lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
                                             lt::vec3 wo = lt::polar_to_card(th[x], 0.);
                                             lt::vec3 rgb = brdf->eval(wi, wo, app_data.sampler);
                                             xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
@@ -591,7 +594,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                 {
                     lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
 
-                                        
+
                     for (int i = 0; i < 10000; i++) {
                         lt::vec3 wo = app_data.brdfs[app_data.current_brdf_idx]->sample(wi, app_data.sampler).wo;
                         float phi = std::atan2(wo.y, wo.x);
@@ -602,9 +605,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                             app_data.s_brdf_sampling->add(int(x), int(y), lt::Spectrum(1));
                         else
                             app_data.s_brdf_sampling->sum_counts++;
-                    } 
-                    
-                    
+                    }
+
+
                     //std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, app_data.s_brdf_sampling->h);
                     //std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, app_data.s_brdf_sampling->w);
                     //for (int x = 0; x < app_data.s_brdf_sampling_pdf->w; x++) {
@@ -617,15 +620,15 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     //        app_data.s_brdf_sampling_diff->set(x,y,glm::abs(app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
                     //    }
                     //}
-                    
-                    
+
+
                     for (int i = 0; i < 10000; i++) {
                         lt::vec3 wo = lt::square_to_cosine_hemisphere(app_data.sampler.next_float(), app_data.sampler.next_float());
                         float phi = std::atan2(wo.y, wo.x);
                         phi = phi < 0 ? 2 * lt::pi + phi : phi;
                         int x = int(phi / (2. * lt::pi) * (float)app_data.s_brdf_sampling->w);
                         int y = int(std::acos(wo.z) / (0.5 * lt::pi) * (float)app_data.s_brdf_sampling->h);
-                           
+
                         if (y < app_data.s_brdf_sampling->h) {
                             app_data.s_brdf_sampling_pdf->add(x, y, lt::Spectrum(app_data.brdfs[app_data.current_brdf_idx]->pdf(wi, wo)));
                             app_data.s_brdf_sampling_diff->set(x, y, (app_data.s_brdf_sampling_pdf->get(x, y) - app_data.s_brdf_sampling->get(x, y)));
@@ -672,9 +675,13 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     auto ms_per_frame = app_data.ren_dir_light.render(app_data.scn_dir_light);
                     app_data.rsen_dir_light.update_data();
 
-                    if (ImPlot::BeginPlot("##image","","", ImVec2(-1,-1),ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id(), ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
                         ImPlot::EndPlot();
+                    }
+
+                    if (ImGui::Button("Save")) {
+                        lt::save_sensor_exr(*app_data.ren_dir_light.sensor, "save_dir_light.exr");
                     }
 
                     ImGui::EndTabItem();
@@ -699,7 +706,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Validation"))
                 {
-                    
+
                     if (ImGui::Button("Run validation of current brdf model")) {
                         app_data.validation = lt::BrdfValidation::validate(*app_data.brdfs[app_data.current_brdf_idx]);
                     }
@@ -718,11 +725,11 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     ImGui::PopStyleColor();
 
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.found_nan ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
-                    ImGui::Text("Found nan");
+                    ImGui::Text("NaN");
                     ImGui::PopStyleColor();
 
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.negative_value ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
-                    ImGui::Text("Found negative values");
+                    ImGui::Text("Negative values");
                     ImGui::PopStyleColor();
 
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.reciprocity ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
@@ -730,7 +737,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                     ImGui::PopStyleColor();
 
                     ImGui::PushStyleColor(ImGuiCol_Text, app_data.validation.energy_conservative ? IM_COL32(0, 255, 0, 255) : IM_COL32(255, 0, 0, 255));
-                    ImGui::Text("Reciprocity");
+                    ImGui::Text("Energy conservation");
                     ImGui::PopStyleColor();
 
                     if (ImPlot::BeginPlot("Directional albedo", "theta", "albedo", ImVec2(-1, 0), 0, ImPlotAxisFlags_Lock, ImPlotAxisFlags_Lock)) {
@@ -762,9 +769,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.45);
             NEED_RESET(ImGui::SliderAngle("ph_i", &app_data.phi_i, 0, 360));
-            
-            std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light.lights[0]) ;
-            dl->dir = -lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i),std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
+
+            std::shared_ptr<lt::DirectionnalLight> dl = std::static_pointer_cast<lt::DirectionnalLight>(app_data.scn_dir_light.lights[0]);
+            dl->dir = -lt::vec3(std::sin(app_data.theta_i) * std::cos(app_data.phi_i), std::cos(app_data.theta_i), std::sin(app_data.theta_i) * std::sin(app_data.phi_i));
 
             ImGui::EndChild();
 
@@ -787,7 +794,7 @@ int main(int, char**)
     const char* glsl_version = "#version 330";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    
+
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1280, 720, "BRDF Viewer", nullptr, nullptr);
     if (window == nullptr)
@@ -814,9 +821,9 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     io.Fonts->AddFontFromFileTTF("../../../3rd_party/Roboto-Regular.ttf", 15.);
-    
+
     ImGui::StyleColorsDark();
-    
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -824,7 +831,7 @@ int main(int, char**)
 
     ImVec4 clear_color = ImVec4(0.f, 0.f, 0.0f, 1.00f);
     //ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-   
+
     //lt::GGXMicrosurface ggx_ms(0.4,0.5);
 
 
@@ -834,8 +841,8 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-        
-        
+
+
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -870,7 +877,7 @@ int main(int, char**)
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    
+
 
     return 0;
 }

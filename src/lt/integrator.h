@@ -262,9 +262,12 @@ public:
 
             // Compute BRDF  contrib
             vec3 wi = si.to_local(-r.d);
+            if (wi.z < 0.000001)
+                return s;
+
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
 
-            if (bs.wo.z < 0.000001 || wi.z < 0.000001)
+            if (bs.wo.z < 0.000001)
                 return s;
 
             #if !defined(SAMPLE_OPTIM)
