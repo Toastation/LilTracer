@@ -6,6 +6,8 @@
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <memory>
 #include <vector>
 
@@ -13,14 +15,77 @@
 
 namespace LT_NAMESPACE {
 
-    using vec3 = glm::vec3;
-    using vec2 = glm::vec2;
+using vec3 = glm::vec3;
+using vec2 = glm::vec2;
 
 using Spectrum = vec3;
 
 using Float = float;
 
 const Float pi = 3.14159265359;
+
+
+
+enum LogType {
+    logNoLabel
+    , logDebug
+    , logInfo
+    , logHighlight
+    , logSuccess
+    , logWarning
+    , logError
+};
+
+class Log
+{
+private:
+    bool show;
+    std::stringstream s;
+public:
+    static LogType level;
+    Log() : show(false) {}
+    Log(LogType type) : show(false) {
+        show = type >= level;
+        switch (type) {
+        case logDebug:
+            s << "\033[34m[LT - Debug] ";
+            break;
+        case logInfo:
+            s << "\033[37m[LT - Info] ";
+            break;
+        case logHighlight:
+            s << "\033[97;1m[LT - Info] ";
+            break;
+        case logSuccess:
+            s << "\033[32m[LT - Success] ";
+            break;
+        case logWarning:
+            s << "\033[35m[LT - Warning] ";
+            break;
+        case logError:
+            s << "\033[31m[LT - Error] ";
+            break;
+        case logNoLabel:
+            break;
+        }
+    }
+
+
+    ~Log() {
+        if (show)
+            std::cout << s.str() << "\033[0m" << std::endl;
+    }
+
+    template<class T>
+    Log& operator<<(const T& msg) {
+        s << msg;
+        return *this;
+    }
+
+
+};
+
+
 
 template <typename T>
 inline std::vector<T> linspace(T start, T end, size_t size, bool centered = true)
@@ -88,7 +153,7 @@ inline vec3 square_to_cosine_hemisphere(Float u1, Float u2)
     Float dy = r * std::sin(theta);
     Float z = std::sqrt(glm::clamp(1.f - dx * dx - dy * dy,0.00001f,1.f));
     if (z != z)
-        std::cout << "ff" << std::endl;
+        Log(logError) << "ff";
     return vec3(dx, dy, z);
 #endif
 }
@@ -213,5 +278,7 @@ template <class T>
 int binary_search(const std::vector<T>& arr, const T& val) {
     return binary_search<T>(arr.data(), val, arr.size());
 }
+
+
 
 } // namespace LT_NAMESPACE

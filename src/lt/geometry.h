@@ -76,7 +76,7 @@ public:
         // Parse obj
         fastObjMesh* fobj = fast_obj_read(filename.c_str());
         if (!fobj) {
-            std::cerr << "Could not read : " << filename << std::endl;
+            Log(logError) << "Could not read : " << filename;
             return;
         }
 

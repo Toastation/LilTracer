@@ -785,7 +785,9 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
 // Main code
 int main(int, char**)
-{
+{   
+    lt::Log::level = lt::logNoLabel;
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -806,7 +808,7 @@ int main(int, char**)
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
-        std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
+        lt::Log(lt::logError) << "Error: " << glewGetErrorString(err);
         glfwTerminate();
         return -1;
     }

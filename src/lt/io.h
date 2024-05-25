@@ -94,7 +94,7 @@ static void json_set_texture(const json& j, Texture<Spectrum>* ptr, const std::s
 {
     std::string texture_path = dir + std::string(j);
     if (load_texture_exr(texture_path, *ptr))
-        std::cerr << texture_path << " : cannot be loaded. " << std::endl;
+        Log(logError) << texture_path << " : cannot be loaded. ";
 }
 
 /**
@@ -136,11 +136,11 @@ static void set_params(const json& j, const Params& params, const std::string& d
                     (Texture<Spectrum>*)params.ptrs[i], dir);
                 break;
             default:
-                std::cerr << "json to Params::Type not defined" << std::endl;
+                Log(logError) << "json to Params::Type not defined";
                 break;
             }
         } else {
-            std::cout << "missing : " << params.names[i] << std::endl;
+            Log(logInfo) << "missing : " << params.names[i];
         }
     }
 }
@@ -168,7 +168,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
         json_scn = json::parse(str);
     } catch (const json::exception& e) {
         // Handle JSON parsing errors
-        std::cerr << e.what() << std::endl;
+        Log(logError) << e.what();
     }
 
     // Initialize sampler in the renderer
@@ -194,8 +194,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
         // Set the integrator in the renderer
         ren.integrator = integrator;
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing integrator"
-                  << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing integrator";
     }
 
     // Parse Sensor
@@ -212,8 +211,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
 
         ren.sensor = sensor;
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing sensor"
-                  << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing sensor";
     }
 
     // Parse Camera
@@ -231,8 +229,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
         // Set the camera in the renderer
         ren.camera = camera;
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing camera"
-                  << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing camera";
     }
 
     // Parse BRDF
@@ -254,7 +251,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.brdfs.push_back(brdf);
         }
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing brdf" << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing brdf";
     }
 
     // Parse Background
@@ -288,13 +285,13 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.lights.push_back(light);
         }
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing light" << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing light";
     }
 
     // Parse Geometrys
     if (json_scn.contains("geometries")) {
         for (const auto& json_geometry : json_scn["geometries"]) {
-            std::cout << json_geometry << std::endl;
+            Log(logInfo) << json_geometry;
 
             std::shared_ptr<Geometry> geometry = Factory<Geometry>::create(json_geometry["type"]);
             if (!geometry)
@@ -315,8 +312,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.geometries.push_back(geometry);
         }
     } else {
-        std::cerr << "Abort generate_from_json, cause : Missing geometries"
-                  << std::endl;
+        Log(logWarning) << "Abort generate_from_json, cause : Missing geometries";
     }
 
     // Initialize the scene's acceleration structure

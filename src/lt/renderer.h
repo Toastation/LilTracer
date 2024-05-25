@@ -56,7 +56,7 @@ public:
                 thr.join();
             }
         } catch (std::exception& ex) {
-            std::cerr << ex.what() << std::endl;
+            Log(logError) << ex.what();
         }
     }
 

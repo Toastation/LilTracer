@@ -59,7 +59,7 @@ public:
             return creator(std::forward<Ts>(ts)...);
         }
 
-        std::cerr << "factory registry[" << name << "] undefined" << std::endl;
+        Log(logError) << "factory registry[" << name << "] undefined";
         return std::shared_ptr<T>(nullptr);
     }
 };

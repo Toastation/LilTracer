@@ -41,7 +41,7 @@ namespace LT_NAMESPACE {
         {}
 
         static BrdfValidation validate(Brdf& brdf) {
-            std::cout << "validate " << brdf.type << std::endl;
+            Log(logInfo) << "validate " << brdf.type;// << std::endl;
 
             BrdfValidation validation;
             validation.directional_albedo.resize(number_of_theta);
