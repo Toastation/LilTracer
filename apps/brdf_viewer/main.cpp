@@ -672,8 +672,10 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Directional Light"))
                 {
-                    auto ms_per_frame = app_data.ren_dir_light.render(app_data.scn_dir_light);
-                    app_data.rsen_dir_light.update_data();
+                    bool ren_will_reset = app_data.ren_dir_light.need_reset;
+                    if (app_data.ren_dir_light.render(app_data.scn_dir_light) && !ren_will_reset){
+                        app_data.rsen_dir_light.update_data();
+                    }
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id(), ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
@@ -689,8 +691,10 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
-                    app_data.ren_glo_ill.render(app_data.scn_glo_ill);
-                    app_data.rsen_glo_ill.update_data();
+                    bool ren_will_reset = app_data.ren_glo_ill.need_reset;
+                    if (app_data.ren_glo_ill.render(app_data.scn_glo_ill) && !ren_will_reset){
+                        app_data.rsen_glo_ill.update_data();
+                    }
 
                     if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.id(), ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));

@@ -24,10 +24,8 @@ using Float = float;
 
 const Float pi = 3.14159265359;
 
-
-
 enum LogType {
-    logNoLabel
+      logNoLabel
     , logDebug
     , logInfo
     , logHighlight
@@ -84,7 +82,6 @@ public:
 
 
 };
-
 
 
 template <typename T>
@@ -153,7 +150,7 @@ inline vec3 square_to_cosine_hemisphere(Float u1, Float u2)
     Float dy = r * std::sin(theta);
     Float z = std::sqrt(glm::clamp(1.f - dx * dx - dy * dy,0.00001f,1.f));
     if (z != z)
-        Log(logError) << "ff";
+        Log(logError) << "square_to_cosine_hemisphere : invalid sample generated";
     return vec3(dx, dy, z);
 #endif
 }
@@ -174,6 +171,17 @@ inline void orthonormal_basis(const vec3& n, vec3& t, vec3& b)
         t = glm::normalize(vec3(1.f - n.x * n.x * c1, c2, -n.x));
         b = glm::normalize(vec3(c2, 1.f - n.y * n.y * c1, -n.y));
     }
+}
+
+inline glm::mat3 build_tbn_from_w(const vec3& w)
+{
+    vec3 normal = w;
+    float sign = copysignf(1.0f, normal.z);
+    const float a = -1.0f / (sign + normal.z);
+    const float b = normal.x * normal.y * a;
+    vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
+    vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
+    return glm::mat3(tangent, bitangent, normal);
 }
 
 inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, const Spectrum& k) {
@@ -199,51 +207,6 @@ inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, co
 
     return 0.5f * (Rp2 + Rs2);
 }
-
-inline glm::mat3 build_tbn_from_w(const vec3& w)
-{
-    vec3 normal = w;
-    float sign = copysignf(1.0f, normal.z);
-    const float a = -1.0f / (sign + normal.z);
-    const float b = normal.x * normal.y * a;
-    vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
-    vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
-    return glm::mat3(tangent, bitangent, normal);
-}
-
-//template <class T>
-//int binary_search(const std::vector<T>& arr, const T& u) {
-//
-//    int left = 0;
-//    int right = arr.size() - 1;
-//    int i = 1000;
-//
-//    while ((left <= right) && (i > 0))
-//    {
-//        int mid = left + (right - left) / 2;
-//
-//        if (arr[mid] <= u) {
-//            if (arr[mid + 1] >= u)
-//            {
-//                return mid;
-//            }
-//            else
-//            {
-//                left = mid + 1;
-//            }
-//        }
-//        else
-//        {
-//            right = mid - 1;
-//        }
-//
-//    }
-//    return left;
-//    //return -1;
-//
-//}
-
-
 
 template <class T>
 int binary_search(const T* arr, const T& val, const int& size) {

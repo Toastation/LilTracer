@@ -37,11 +37,9 @@ public:
         Sample bs;
         if (sampler.next_float() < weight) {
             bs = brdf1->sample(wi, sampler);
-            bs.value /= weight;
         }
         else {
             bs = brdf2->sample(wi, sampler);
-            bs.value /= 1. - weight;
         }
         return bs;
     }

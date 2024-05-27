@@ -21,10 +21,11 @@ static int save_sensor_exr(const Sensor& sen, const std::string& filename)
     int ret = SaveEXR((float*)sen.value.data(), sen.w, sen.h, 3, 0,
         filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
-        fprintf(stderr, "Save EXR err: %s\n", err);
+        Log(logError) << "Save EXR err : " << err;
         return ret;
     }
-    //printf("Saved exr file. [ %s ] \n", filename.c_str());
+
+    Log(logInfo) << "Saved exr file. [ " << filename << "]";
 
     return 0;
 };
@@ -37,7 +38,7 @@ static int load_texture_exr(const std::string& filename, Texture<Spectrum>& t)
     const char* err;
     int ret = LoadEXR(&out, &width, &height, filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS) {
-        fprintf(stderr, "Load EXR err: %s\n", err);
+        Log(logError) << "Load EXR err : " << err;
         return ret;
     }
 

@@ -84,19 +84,16 @@ namespace LT_NAMESPACE {
             Float porosity = 1 - ms.tau_v(to_unit_space(wi));
             // Eq 26 Siggraph 2024
             Float base_weight = porosity / (ms.tau_0 + porosity);
-            
+                       
             if (sampler.next_float() < base_weight) {
                 bs = base->sample(wi, sampler);
-
-                Float visibility = ms.G2_0(to_unit_space(wi), to_unit_space(bs.wo));
-                assert(visibility == visibility);
-
-                bs.value *= (1.f - ms.tau_0) * visibility / base_weight;
             }
             else {
                 bs = RoughShapeInvariantMicrosurface<MicrograinMicrosurface>::sample(wi, sampler);
-                bs.value *= ms.tau_0 / (1-base_weight);
             }
+
+            Float pdf_ = (1 - base_weight) * RoughShapeInvariantMicrosurface<MicrograinMicrosurface>::pdf(wi, bs.wo) + base_weight * base->pdf(wi, bs.wo);
+            bs.value = eval(wi, bs.wo, sampler) / pdf_;
 
             return bs;
         }
@@ -159,13 +156,13 @@ namespace LT_NAMESPACE {
 
             if (sampler.next_float() < base_weight) {
                 bs = base->sample(wi, sampler);
-                Float visibility = ms.G2_0(to_unit_space(wi), to_unit_space(bs.wo));
-                bs.value *= (1.f - ms.tau_0) * visibility / base_weight;
             }
             else {
                 bs = DiffuseShapeInvariantMicrosurface<MicrograinMicrosurface>::sample(wi, sampler);
-                bs.value *= ms.tau_0 / (1 - base_weight);
             }
+
+            Float pdf_ = (1 - base_weight) * DiffuseShapeInvariantMicrosurface<MicrograinMicrosurface>::pdf(wi, bs.wo) + base_weight * base->pdf(wi, bs.wo);
+            bs.value = eval(wi, bs.wo, sampler) / pdf_;
 
             return bs;
         }

@@ -15,8 +15,6 @@
 #include <lt/sensor.h>
 
 namespace LT_NAMESPACE {
-	
-
 
 
     struct BrdfValidation {
