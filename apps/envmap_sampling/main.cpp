@@ -77,7 +77,7 @@ void AppInit(AppData& app_data) {
     need_reset = false;
 
     app_data.envmap = std::make_shared<lt::EnvironmentLight>();
-    lt::load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", app_data.envmap->envmap);
+    lt::load_texture_exr("../../../data/envmaps/hallstatt4_hd.exr", app_data.envmap->envmap);
     app_data.envmap->init();
     app_data.rt.texture = &app_data.envmap->envmap;
     app_data.rt.initialize();

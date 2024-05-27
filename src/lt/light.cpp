@@ -97,9 +97,9 @@ namespace LT_NAMESPACE {
         //std::vector<float>::iterator begin = c.begin();
         //int id = std::lower_bound(begin, c.end(), u) - begin;
         // Binary search
-        int id = binary_search<Float>(c,u);
-        
-
+        //int id = binary_search<Float>(c,u);
+        // From inv_cumulative_density
+        int id = inv_cumulative_density.data[int(u * inv_cumulative_density.h * inv_cumulative_density.w)];
 
         int y = id / envmap.w;
         y = envmap.h - y - 1;
@@ -119,7 +119,7 @@ namespace LT_NAMESPACE {
 #endif
         s.emission = eval(s.direction) * solid_angle;
         s.expected_distance_to_intersection = std::numeric_limits<Float>::infinity();
-
+        
         return s;
     }
 
@@ -175,6 +175,18 @@ namespace LT_NAMESPACE {
             density.data[n] /= cumulative_density.data[envmap.w * envmap.h - 1];
             cumulative_density.data[n] /= cumulative_density.data[envmap.w * envmap.h - 1];
         }
+
+        inv_cumulative_density.w = envmap.w;
+        inv_cumulative_density.h = envmap.h;
+        inv_cumulative_density.initialize();
+
+        std::vector<Float> u = linspace<Float>(0.,1., envmap.w * envmap.h, true);
+        
+        for (int n = 0; n < envmap.w * envmap.h; n++) {
+            inv_cumulative_density.data[n] = binary_search<Float>(cumulative_density.data, u[n], envmap.w* envmap.h);
+            //Log(logDebug) << inv_cumulative_density.data[n] << "\t" << density.data[inv_cumulative_density.data[n]] << "\t" << envmap.data[inv_cumulative_density.data[n]].x;
+        }
+
     }
 
 
