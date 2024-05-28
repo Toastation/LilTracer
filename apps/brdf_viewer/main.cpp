@@ -3,7 +3,12 @@
 
 #include <glm/glm.hpp>
 
+#ifdef __linux__ 
+#include <GL/glew.h>
+#else
 #include <gl/glew.h>
+#endif
+
 #include <GLFW/glfw3.h>
 
 #include <imgui.h>

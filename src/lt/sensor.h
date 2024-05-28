@@ -7,6 +7,7 @@
 #include <lt/lt_common.h>
 #include <lt/serialize.h>
 #include <lt/factory.h>
+#include <atomic>
 
 namespace LT_NAMESPACE {
 
