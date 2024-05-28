@@ -192,9 +192,12 @@ public:
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 
-        Ray rs(si.pos, -ls.direction);
+        Ray rs(si.pos,-ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
+
+            if (wi.z < 0.00001)
+                return contrib;
             vec3 brdf_contrib = si.brdf->eval(wi, wo, sampler);
             #if defined(USE_MIS)
             if (light->is_dirac()) {
@@ -206,11 +209,10 @@ public:
                 contrib += weight * brdf_contrib * ls.emission / ls.pdf;
             }
             #else
-            //if(ls.pdf > 0.){
-                Spectrum light_fac = ls.emission / ls.pdf;
-                contrib += light_fac * brdf_contrib;
-                assert(light_fac.x == light_fac.x);
-            //}
+            Spectrum light_fac = ls.emission / ls.pdf;
+            contrib += light_fac * brdf_contrib;
+            assert((light_fac * brdf_contrib).x < 1000.);
+            assert(ls.pdf > 0.);
             #endif
         }
 

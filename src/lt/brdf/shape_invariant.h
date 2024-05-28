@@ -153,8 +153,8 @@ Spectrum RoughShapeInvariantMicrosurface<MICROSURFACE>::eval(vec3 wi, vec3 wo, S
     Float d = ShapeInvariantMicrosurface<MICROSURFACE>::D(wh);
     Float g = ShapeInvariantMicrosurface<MICROSURFACE>::G2(wh, wi, wo);
     Spectrum f = fresnelConductor(glm::dot(wh, wi), eta, kappa);
-    Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f) * glm::clamp(wo[2], 0.0001f, 0.9999f));
-    return brdf * glm::clamp(wo[2], 0.0001f, 0.9999f);
+    Spectrum brdf = d * g * f / (4.f * glm::clamp(wi[2], 0.0001f, 0.9999f));
+    return brdf;
 }
 
 template <class MICROSURFACE>
