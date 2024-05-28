@@ -151,14 +151,18 @@ static void set_params(const json& j, const Params& params, const std::string& d
  * This function parses a JSON description of a scene and generates the
  * corresponding Scene and Renderer objects.
  *
+ * @param path The path to the JSON file
  * @param str The JSON description as a string.
  * @param scn Reference to the Scene object to be filled.
  * @param ren Reference to the Renderer object to be filled.
  * @return True if the generation is successful, false otherwise.
  */
-static bool generate_from_json(const std::string& dir, const std::string& str, Scene& scn,
+static bool generate_from_json(const std::string& path, const std::string& str, Scene& scn,
     Renderer& ren)
 {
+    std::filesystem::path std_path(path);
+    const std::string dir = std_path.parent_path().string() + "/";
+
     // Map to store references to BRDFs
     std::map<std::string, std::shared_ptr<Brdf>> brdf_ref;
 
@@ -194,7 +198,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
         // Set the integrator in the renderer
         ren.integrator = integrator;
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing integrator";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing integrator in file " << path;
     }
 
     // Parse Sensor
@@ -211,7 +215,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
 
         ren.sensor = sensor;
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing sensor";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing sensor in file " << path;
     }
 
     // Parse Camera
@@ -229,7 +233,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
         // Set the camera in the renderer
         ren.camera = camera;
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing camera";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing camera in file " << path;
     }
 
     // Parse BRDF
@@ -251,7 +255,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.brdfs.push_back(brdf);
         }
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing brdf";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing brdf in file " << path;
     }
 
     // Parse Background
@@ -285,7 +289,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.lights.push_back(light);
         }
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing light";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing light in file " << path;
     }
 
     // Parse Geometrys
@@ -312,7 +316,7 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
             scn.geometries.push_back(geometry);
         }
     } else {
-        Log(logWarning) << "Abort generate_from_json, cause : Missing geometries";
+        Log(logWarning) << "Abort generate_from_json, cause : Missing geometries in file " << path;
     }
 
     // Initialize the scene's acceleration structure
@@ -322,18 +326,18 @@ static bool generate_from_json(const std::string& dir, const std::string& str, S
 }
 
 static bool generate_from_path(const std::string& path, Scene& scn, Renderer& ren) {
-    
-    std::ifstream t(path);
-    t.seekg(0, std::ios::end);
-    size_t size = t.tellg();
-    std::string str(size, ' ');
-    t.seekg(0);
-    t.read(&str[0], size);
+    if (path.ends_with(".json")) {
+        std::ifstream t(path);
+        t.seekg(0, std::ios::end);
+        size_t size = t.tellg();
+        std::string str(size, ' ');
+        t.seekg(0);
+        t.read(&str[0], size);
 
-    std::filesystem::path std_path(path);
-    std::filesystem::path std_dir = std_path.parent_path();
-
-    return generate_from_json(std_dir.string()+"/", str, scn, ren);
+        return generate_from_json(path, str, scn, ren);
+    }
+    Log(logError) << "Abort generate_from_path: file format not supported (" << path << ")";
+    return false;
 }
 
 } // namespace LT_NAMESPACE

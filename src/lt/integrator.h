@@ -167,7 +167,7 @@ public:
             ? scene.lights[light_idx]
             : scene.infinite_lights[n_light - light_idx - 1];
 
-        return estimate_direct(r, si, light, scene, sampler) / light_pdf;
+        return estimate_direct(r, si, light, scene, sampler)  / light_pdf;
     }
 
     /**
@@ -263,7 +263,7 @@ public:
             if (depth >= max_depth || si.brdf->is_emissive())
                 return si.brdf->emission();
 
-            // Compute BRDF  contrib
+            // Compute BRDF contrib
             vec3 wi = si.to_local(-r.d);
             if (wi.z < 0.000001)
                 return s;

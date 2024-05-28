@@ -21,7 +21,7 @@ namespace LT_NAMESPACE {
 class Sensor : public Serializable {
 public:
     /**
-     * @brief Default constructor.
+	 * @brief Default constructor.
      */
     Sensor(const std::string& type = "Sensor", const uint32_t& w = 0, const uint32_t& h = 0)
         : Serializable(type)
@@ -88,7 +88,7 @@ public:
     uint32_t w; /**< Width of the sensor. */
     uint32_t h; /**< Height of the sensor. */
     std::vector<Spectrum> acculumator; /**< Accumulator array for sensor samples. */
-    std::vector<Spectrum> value; /**< Value array for sensor samples. */
+    std::vector<Spectrum> value; /**< Value array for sensor samples. (accumulator[i] / count[i]) */
     std::vector<uint16_t> count; /**< Count array for the number of samples at each pixel. */
     std::atomic<uint32_t> sum_counts;
     std::vector<Float> u; /**< Vector representing the u-coordinates of the sensor pixels. */
