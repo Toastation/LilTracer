@@ -24,7 +24,7 @@
     "texture": "../envmaps/hallstatt4_hd.exr",
     "intensity": 1.0
   },
-  "nlight": [
+  "light": [
     {
       "type": "DirectionnalLight",
       "intensity": 1.0,
