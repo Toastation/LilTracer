@@ -392,7 +392,7 @@ public:
                 vec3 wi = si.to_local(-r.d);
                 Brdf::Sample bs = si.brdf->sample(wi, sampler);
 
-                if (bs.wo.z < 0.0001)
+                if (bs.wo.z < 0.0001 || wi.z < 0.0001)
                     break;
                 
                 #if !defined(SAMPLE_OPTIM)
