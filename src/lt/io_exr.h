@@ -11,7 +11,7 @@ namespace LT_NAMESPACE {
 static int save_sensor_exr(const Sensor& sen, const std::string& filename)
 {
     namespace fs = std::filesystem;
-    fs::path p(filename);
+    fs::path p("./"+filename);
     fs::path d = p.parent_path();
     if (!fs::is_directory(d) || !fs::exists(d)) { // Check if src folder exists
         fs::create_directories(d); // create src folder

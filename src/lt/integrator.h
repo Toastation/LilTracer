@@ -14,7 +14,7 @@
 #include <chrono>
 
 //#define SAMPLE_OPTIM
-
+//#define USE_MIS
 namespace LT_NAMESPACE {
 
 inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
@@ -192,11 +192,14 @@ public:
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 
-        Ray rs(si.pos, -ls.direction);
+        Ray rs(si.pos,-ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
+
+            if (wi.z < 0.00001)
+                return contrib;
             vec3 brdf_contrib = si.brdf->eval(wi, wo, sampler);
-            #if !defined(USE_MIS)
+            #if defined(USE_MIS)
             if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
             }
@@ -206,11 +209,14 @@ public:
                 contrib += weight * brdf_contrib * ls.emission / ls.pdf;
             }
             #else
-            contrib += brdf_contrib * ls.emission / ls.pdf;
+            Spectrum light_fac = ls.emission / ls.pdf;
+            contrib += light_fac * brdf_contrib;
+            assert((light_fac * brdf_contrib).x < 1000.);
+            assert(ls.pdf > 0.);
             #endif
         }
 
-        #if !defined(USE_MIS)
+        #if defined(USE_MIS)
         if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
             Float weight = 1;
@@ -460,5 +466,47 @@ public:
 protected:
     void link_params() { }
 };
+
+
+/**
+ * @brief Direct lighting integrator class.
+ */
+class ReSTIRIntegrator : public Integrator {
+public:
+    ReSTIRIntegrator()
+        : Integrator("ReSTIRIntegrator")
+    {
+        link_params();
+    };
+
+    Spectrum render_pixel(Ray& r, Scene& scene, Sampler& sampler)
+    {
+        SurfaceInteraction si;
+
+        Spectrum s(0.);
+
+        if (scene.intersect(r, si)) {
+            if (!si.brdf) {
+                r = Ray(si.pos + r.d * 0.00001f, r.d);
+                return render_pixel(r, scene, sampler);
+            }
+
+            if (si.brdf->is_emissive())
+                return si.brdf->emission();
+
+            s += uniform_sample_one_light(r, si, scene, sampler);
+        }
+        else {
+            for (const auto& light : scene.infinite_lights)
+                s += light->eval(r.d);
+        }
+
+        return s;
+    }
+
+protected:
+    void link_params() { }
+};
+
 
 } // namespace LT_NAMESPACE

@@ -82,7 +82,7 @@ void AppInit(AppData& app_data) {
     need_reset = false;
 
     app_data.envmap = std::make_shared<lt::EnvironmentLight>();
-    lt::load_texture_exr("kloofendal_48d_partly_cloudy_puresky_1k.exr", app_data.envmap->envmap);
+    lt::load_texture_exr("../../../data/envmaps/hallstatt4_hd.exr", app_data.envmap->envmap);
     app_data.envmap->init();
     app_data.rt.texture = &app_data.envmap->envmap;
     app_data.rt.initialize();
@@ -95,11 +95,19 @@ void AppInit(AppData& app_data) {
     app_data.y.resize(app_data.nsample);
     for (int i = 0; i < app_data.nsample; i++) {
         lt::Light::Sample env_sample = app_data.envmap->sample(lt::SurfaceInteraction(), app_data.sampler);
-        app_data.samples[i] = env_sample.direction;
+        app_data.samples[i] = -env_sample.direction;
+        //assert(env_sample.pdf > 0.);
+        if (env_sample.pdf <= 0.) {
+            lt::Log(lt::logError) << "invalid sample pdf";
+        }
         float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
         phi = phi > 0. ? phi : 2 * lt::pi + phi;
         app_data.x[i] = phi / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
         app_data.y[i] = std::acos(app_data.samples[i].y) / lt::pi * (float)app_data.envmap->envmap.h;
+        app_data.y[i] = (float)app_data.envmap->envmap.h - app_data.y[i] - 1;
+
+        float env_pdf = app_data.envmap->pdf(lt::vec3(0.), env_sample.direction);
+        assert(env_sample.pdf == env_pdf);
     }
 
 }

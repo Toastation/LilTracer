@@ -208,33 +208,49 @@ inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, co
     return 0.5f * (Rp2 + Rs2);
 }
 
+//template <class T>
+//int binary_search(const T* arr, const T& val, const int& size) {
+//    // edge case: value of smaller than min or larger than max
+//    if (arr[0] >= val) return 0;
+//    if (arr[size - 1] <= val) return size - 1;
+//
+//    int start = 0;
+//    int end = size - 1;
+//
+//    //while (start <= end) {
+//    while (end - start >= 1) {
+//        int mid = (end + start) / 2;
+//
+//        // value is in interval from previous to current element
+//        if (val >= arr[mid] && val <= arr[mid+1]) {
+//            return mid ;
+//        }
+//        else {
+//            if (arr[mid] < val) {
+//                start = mid;
+//            }
+//            else {
+//                end = mid;
+//            }
+//        }
+//    }
+//    return -1;
+//}
+
 template <class T>
 int binary_search(const T* arr, const T& val, const int& size) {
-    // edge case: value of smaller than min or larger than max
-    if (arr[0] >= val) return 0;
-    if (arr[size - 1] <= val) return size - 1;
-
-    int start = 0;
-    int end = size - 1;
-
-    //while (start <= end) {
-    while (end - start >= 1) {
-        int mid = (end + start) / 2;
-
-        // value is in interval from previous to current element
-        if (val >= arr[mid] && val <= arr[mid+1]) {
-            return mid ;
+    int first = 0, len = size;
+    while (len > 0) {
+        int half = len >> 1, middle = first + half;
+        // Bisect range based on value of _pred_ at _middle_
+        if (arr[middle] <= val) {
+            first = middle + 1;
+            len -= half + 1;
         }
-        else {
-            if (arr[mid] < val) {
-                start = mid;
-            }
-            else {
-                end = mid;
-            }
-        }
+        else
+            len = half;
     }
-    return -1;
+    return glm::clamp(first - 1, 0, size - 2);
 }
 
 template <class T>

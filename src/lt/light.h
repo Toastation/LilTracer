@@ -144,6 +144,7 @@ namespace LT_NAMESPACE {
 
         Texture<Float> density;
         Texture<Float> cumulative_density;
+        Texture<int> inv_cumulative_density;
         std::vector<Float> c;
         Float dtheta;
         Float dphi;
