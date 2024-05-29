@@ -33,7 +33,6 @@ struct RenderTexture {
             return false;
         }
 
-
         glBindTexture(GL_TEXTURE_2D, texture_id);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->w, texture->h, 0, GL_RGB, GL_FLOAT, (float*)texture->data);
         return true;
@@ -91,18 +90,21 @@ void AppInit(AppData& app_data) {
     for (int i = 0; i < app_data.nsample; i++) {
         lt::Light::Sample env_sample = app_data.envmap->sample(lt::SurfaceInteraction(), app_data.sampler);
         app_data.samples[i] = -env_sample.direction;
-        //assert(env_sample.pdf > 0.);
+        
+        assert(env_sample.pdf > 0.);
+        float env_pdf = app_data.envmap->pdf(lt::vec3(0.), env_sample.direction);
+        assert(env_sample.pdf == env_pdf);
+        
         if (env_sample.pdf <= 0.) {
             lt::Log(lt::logError) << "invalid sample pdf";
         }
+        
         float phi = std::atan2(app_data.samples[i].z, app_data.samples[i].x);
         phi = phi > 0. ? phi : 2 * lt::pi + phi;
         app_data.x[i] = phi / (2. * lt::pi) * (float)app_data.envmap->envmap.w;
         app_data.y[i] = std::acos(app_data.samples[i].y) / lt::pi * (float)app_data.envmap->envmap.h;
         app_data.y[i] = (float)app_data.envmap->envmap.h - app_data.y[i] - 1;
 
-        float env_pdf = app_data.envmap->pdf(lt::vec3(0.), env_sample.direction);
-        assert(env_sample.pdf == env_pdf);
     }
 
 }

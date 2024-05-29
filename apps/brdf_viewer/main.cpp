@@ -11,7 +11,7 @@
 #include <imgui_impl_opengl3.h>
 #include <implot.h>
 
-
+#include <embrace_the_darkness.h>
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -271,6 +271,48 @@ void AppInit(AppData& app_data) {
 
 }
 
+void render_overlay(lt::RendererAsync& ren, const ImVec2& work_pos) {
+    bool p_open = true;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+    ImGui::SetNextWindowPos(work_pos, ImGuiCond_Always);
+    ImGui::SetNextWindowBgAlpha(0.85f); // Transparent background
+    if (ImGui::Begin("Example: Simple overlay", &p_open, window_flags))
+    {
+        if (ImGui::Button("Save")) {
+            lt::save_sensor_exr(*ren.sensor, "save.exr");
+        }
+        ImGui::Text("%.0f ms/frame", ren.delta_time_ms);
+
+    }
+    ImGui::End();
+}
+
+void render_polar_bg(const lt::vec3 wi) {
+    static float xs[100];
+    static float ys[100];
+    for (int x = 0; x < 100; x++) {
+        xs[x] = std::cos(3.141593 * float(x) / 99.);
+        ys[x] = std::sin(3.141593 * float(x) / 99.);
+    }
+    ImPlot::PlotLine("", xs, ys, 100);
+    xs[0] = 0;
+    ys[0] = 0;
+    xs[1] = -std::sqrt(1 - wi.z * wi.z);
+    ys[1] = wi.z;
+    ImPlot::PlotLine("", xs, ys, 2);
+    xs[0] = -1.5;
+    ys[0] = 0;
+    xs[1] = 1.5;
+    ys[1] = 0;
+    ImPlot::PlotLine("", xs, ys, 2);
+    xs[0] = 0;
+    ys[0] = 0;
+    xs[1] = 0;
+    ys[1] = 1.5;
+    ImPlot::PlotLine("", xs, ys, 2);
+}
+
 
 void brdf_slice(std::shared_ptr<lt::Brdf> brdf, float th_i, float ph_i, std::shared_ptr<lt::Sensor> sensor, lt::Sampler& sampler) {
 
@@ -386,7 +428,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
     }
 
     bool open = true;
-    if (ImGui::Begin("Simple layout", &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    if (ImGui::Begin("Simple layout", &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus))
     {
 
         {
@@ -466,39 +508,43 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                         if (ImGui::BeginTabItem("Polar"))
                         {
-                            static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY;
-                            if (ImPlot::BeginSubplots("##AxisLinking", 2, 1, ImVec2(-1, -1), flags)) {
+                            static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY | ImPlotSubplotFlags_NoTitle;
+                            
+
+                            if (ImPlot::BeginSubplots("##AxisLinking", 2, 1, ImVec2(ImGui::GetWindowWidth(), ImGui::GetWindowHeight() * 0.95), flags)) {
 
                                 std::vector<float> th = lt::linspace<float>(-0.5 * lt::pi, 0.5 * lt::pi, 1001);
 
-                                if (ImPlot::BeginPlot("", "x", "y")) {
+                                if (ImPlot::BeginPlot("", " ", " ", ImVec2(0, -1), ImPlotFlags_Equal, ImPlotAxisFlags_NoGridLines, ImPlotAxisFlags_NoGridLines)) {
 
+                                    lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
+                                    render_polar_bg(wi);
                                     for (int i = 0; i < app_data.brdfs.size(); i++) {
                                         std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
 
                                         static float xs[1001];
                                         static float ys[1001];
                                         for (int x = 0; x < 1001; x++) {
-                                            lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                             lt::vec3 wo = lt::polar_to_card(th[x], 0.);
                                             lt::vec3 rgb = brdf->eval(wi, wo, app_data.sampler);
                                             float l = (rgb.x + rgb.y + rgb.z) / 3.;
-                                            xs[x] = wo.x * l;
+                                            xs[x] =-wo.x * l;
                                             ys[x] = wo.z * l;
                                         }
-                                        ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), xs, ys, 1001);
-
+                                        ImPlot::PlotLine((brdf->type + "##" + std::to_string(i)).c_str(), xs, ys, 1001);
 
                                     }
                                     ImPlot::EndPlot();
                                 }
 
-                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "x", "y")) {
+                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), " ", " ", ImVec2(0, -1), ImPlotFlags_Equal, ImPlotAxisFlags_NoGridLines, ImPlotAxisFlags_NoGridLines)) {
 
+
+                                    lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
+                                    render_polar_bg(wi);
 
                                     lt::vec3 rgb[1001];
                                     for (int x = 0; x < 1001; x++) {
-                                        lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
                                         lt::vec3 wo = lt::polar_to_card(th[x], 0.);
                                         rgb[x] = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo, app_data.sampler);
                                     }
@@ -510,7 +556,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                         static float ys[1001];
                                         for (int x = 0; x < 1001; x++) {
                                             lt::vec3 wo = lt::polar_to_card(th[x], 0.);
-                                            xs[x] = wo.x * rgb[x][c];
+                                            xs[x] =-wo.x * rgb[x][c];
                                             ys[x] = wo.z * rgb[x][c];
                                         }
                                         ImPlot::SetNextLineStyle(col[c]);
@@ -527,7 +573,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                             ImGui::EndTabItem();
                         }
 
-                        if (ImGui::BeginTabItem("Theta I"))
+                        if (ImGui::BeginTabItem("Theta O"))
                         {
                             static ImPlotSubplotFlags flags = ImPlotSubplotFlags_LinkRows | ImPlotSubplotFlags_LinkCols | ImPlotSubplotFlags_LinkAllX | ImPlotSubplotFlags_LinkAllY;
                             if (ImPlot::BeginSubplots("##AxisLinking", 2, 1, ImVec2(-1, -1), flags)) {
@@ -535,7 +581,7 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
 
                                 std::vector<float> th = lt::linspace<float>(0., 0.5 * lt::pi, 1001);
 
-                                if (ImPlot::BeginPlot("", "x", "y")) {
+                                if (ImPlot::BeginPlot("", "Theta O ", " ", ImVec2(-1, 0), 0, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
 
                                     for (int i = 0; i < app_data.brdfs.size(); i++) {
                                         std::shared_ptr<lt::Brdf> brdf = app_data.brdfs[i];
@@ -548,21 +594,21 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                                             xs[x] = (rgb.x + rgb.y + rgb.z) / 3.;
 
                                         }
-                                        ImPlot::PlotLine((brdf->type + "#" + std::to_string(i)).c_str(), th.data(), xs, 1001);
+                                        ImPlot::PlotLine((brdf->type + "##" + std::to_string(i)).c_str(), th.data(), xs, 1001);
 
 
                                     }
                                     ImPlot::EndPlot();
                                 }
 
-                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "Theta O", "y")) {
+                                if (ImPlot::BeginPlot(app_data.brdfs[app_data.current_brdf_idx]->type.c_str(), "Theta O", " ")) {
 
 
                                     static float r[1001];
                                     static float g[1001];
                                     static float b[1001];
                                     for (int x = 0; x < 1001; x++) {
-                                        lt::vec3 wi = lt::polar_to_card(app_data.theta_i, 0.);
+                                        lt::vec3 wi = lt::polar_to_card(app_data.theta_i, app_data.phi_i);
                                         lt::vec3 wo = lt::polar_to_card(th[x], 0.);
                                         lt::vec3 rgb = app_data.brdfs[app_data.current_brdf_idx]->eval(wi, wo, app_data.sampler);
                                         r[x] = rgb.x;
@@ -677,33 +723,34 @@ static void AppLayout(GLFWwindow* window, AppData& app_data)
                         app_data.rsen_dir_light.update_data();
                     }
 
-                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    ImVec2 work_pos;
+                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal | ImPlotFlags_NoFrame, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_dir_light.id(), ImVec2(0, 0), ImVec2(app_data.ren_dir_light.sensor->w, app_data.ren_dir_light.sensor->h));
+                        work_pos = ImPlot::GetPlotPos(); 
                         ImPlot::EndPlot();
                     }
 
-                    if (ImGui::Button("Save")) {
-                        lt::save_sensor_exr(*app_data.ren_dir_light.sensor, "save_dir_light.exr");
-                    }
+                    render_overlay(app_data.ren_dir_light, work_pos);
 
                     ImGui::EndTabItem();
                 }
 
                 if (ImGui::BeginTabItem("Global Illumination"))
                 {
+                   
                     bool ren_will_reset = app_data.ren_glo_ill.need_reset;
                     if (app_data.ren_glo_ill.render(app_data.scn_glo_ill) && !ren_will_reset){
                         app_data.rsen_glo_ill.update_data();
                     }
 
-                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
+                    ImVec2 work_pos;
+                    if (ImPlot::BeginPlot("##image", "", "", ImVec2(-1, -1), ImPlotFlags_Equal | ImPlotFlags_NoFrame, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit)) {
                         ImPlot::PlotImage("", (ImTextureID)app_data.rsen_glo_ill.id(), ImVec2(0, 0), ImVec2(app_data.ren_glo_ill.sensor->w, app_data.ren_glo_ill.sensor->h));
+                        work_pos =  ImPlot::GetPlotPos();
                         ImPlot::EndPlot();
                     }
 
-                    if (ImGui::Button("Save")) {
-                        lt::save_sensor_exr(*app_data.ren_glo_ill.sensor, "save_global_illu.exr");
-                    }
+                    render_overlay(app_data.ren_glo_ill, work_pos);
 
                     ImGui::EndTabItem();
                 }
@@ -828,7 +875,9 @@ int main(int, char**)
 
     io.Fonts->AddFontFromFileTTF("../../../3rd_party/Roboto-Regular.ttf", 15.);
 
-    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsDark();
+
+    embraceTheDarkness();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -836,9 +885,6 @@ int main(int, char**)
 
 
     ImVec4 clear_color = ImVec4(0.f, 0.f, 0.0f, 1.00f);
-    //ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    //lt::GGXMicrosurface ggx_ms(0.4,0.5);
 
 
     AppData app_data;
