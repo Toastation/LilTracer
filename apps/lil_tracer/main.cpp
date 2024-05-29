@@ -15,7 +15,7 @@ void printProgress(double percentage, float t) {
 
 int main(int argc, char* argv[])
 {
-
+    lt::Log::level = lt::logDebug;
     for (int a = 1; a < argc; a++) {
 
         lt::Renderer ren;
@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
             time += t;
 
             printProgress(double(s) / double(ren.max_sample - 1.0), t);
-            
         }
 
         std::cout << "\nTime elapsed : " << time << " (ms) " << std::endl;

@@ -14,7 +14,7 @@
 #include <chrono>
 
 //#define SAMPLE_OPTIM
-//#define USE_MIS
+// #define USE_MIS
 namespace LT_NAMESPACE {
 
 inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
@@ -200,6 +200,7 @@ public:
         si.pos -= r.d * 0.00001f;
 
         Light::Sample ls = light->sample(si, sampler);
+        assert(ls.pdf > 0.);
 
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
@@ -207,41 +208,56 @@ public:
         Ray rs(si.pos,-ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
-            if (wi.z < 0.00001)
+            if (wi.z < 0.00001 || wo.z < 0.00001)
                 return contrib;
 
             Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
             #if defined(USE_MIS)
             if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
-            }
-            else {
+            } else {
                 Float brdf_pdf = si.brdf->pdf(wi, wo);
+                assert(brdf_pdf != 0.0);
+                assert(brdf_pdf == brdf_pdf);
                 Float weight = power_heuristic(ls.pdf, brdf_pdf);
                 contrib += weight * brdf_contrib * ls.emission / ls.pdf;
             }
             #else
             Spectrum light_fac = ls.emission / ls.pdf;
             contrib += light_fac * brdf_contrib;
-            assert((light_fac * brdf_contrib).x < 1000.);
-            assert(ls.pdf > 0.);
+            // assert((light_fac * brdf_contrib).x < 1000.);
             #endif
         }
+
+        assert(contrib == contrib);
 
         #if defined(USE_MIS)
         if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
+            if (wi.z < 0.00001 || bs.wo.z < 0.00001)
+                return contrib;
+
             Float weight = 1;
 
             //if (sample_not_specular) {
                 Float light_pdf = light->pdf(si.pos,si.to_world(bs.wo));
+                Float brdf_pdf = si.brdf->pdf(wi,bs.wo);
+                assert(light_pdf != 0 || brdf_pdf != 0);
                 weight = power_heuristic(si.brdf->pdf(wi,bs.wo), light_pdf);
+                assert(weight == weight);
+                assert(bs.value == bs.value);
+
             //}
 
-                vec3 emission = vec3(0.);
-            contrib += bs.value * emission * weight;
+            // vec3 emission = vec3(0.);
+            // Log(logInfo) << "pdf: " << si.brdf->pdf(wi,bs.wo);
+            // Log(logInfo) << "bs.value: " << bs.value.x << ", " << bs.value.y << ", " << bs.value.z;
+            // Log(logInfo) << "weight: " << weight;
+            contrib += bs.value * weight;
         }
         #endif
+
+        assert(contrib == contrib);
 
         return contrib;
     }
@@ -332,7 +348,7 @@ class DirectIntegrator : public Integrator {
 public:
     DirectIntegrator()
         : Integrator("DirectIntegrator"),
-        sample_all_lights(true)
+        sample_all_lights(false)
     {
         link_params();
     };
@@ -376,7 +392,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , max_depth(1)
+        , max_depth(10)
     {
         link_params();
     };
