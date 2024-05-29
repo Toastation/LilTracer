@@ -156,7 +156,6 @@ namespace LT_NAMESPACE {
         for (int n = 0; n < envmap.w * envmap.h; n++) {
             int idx = binary_search<Float>(cumulative_density.data, u[n], envmap.w* envmap.h);
             inv_cumulative_density.data[n] = idx;
-            //Log(logDebug) << inv_cumulative_density.data[n] << "\t" << density.data[inv_cumulative_density.data[n]] << "\t" << envmap.data[inv_cumulative_density.data[n]].x;
         }
 
     }

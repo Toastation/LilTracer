@@ -45,8 +45,9 @@ public:
     bool need_reset;
     std::atomic<bool> done;
     bool start;
+    float delta_time_ms;
 
-    RendererAsync() { need_reset = false; done = true; start = true; }
+    RendererAsync() { need_reset = false; done = true; start = true; delta_time_ms = 0.; }
 
     ~RendererAsync()
     {
@@ -80,7 +81,7 @@ public:
             
             thr = std::thread(
                 [&](auto s) {
-                    Renderer::render(s);
+                    delta_time_ms = Renderer::render(s);
                     done = true;
                 },
                 scene);

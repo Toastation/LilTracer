@@ -39,13 +39,15 @@ struct Params {
      * @param type The type of the parameter.
      * @param ptr A pointer to the parameter value.
      */
-    void add(const std::string& name, Type type, void* ptr)
+    template<typename T>
+    void add(const std::string& name, Type type, T* ptr)
     {
         count++;
-        ptrs.push_back(ptr);
+        ptrs.push_back((void*)ptr);
         types.push_back(type);
         names.push_back(name);
     }
+
 };
 
 } // namespace LT_NAMESPACE

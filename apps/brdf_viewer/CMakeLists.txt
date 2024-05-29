@@ -18,3 +18,5 @@ target_link_libraries(${PROGRAM_NAME} PRIVATE imgui::imgui)
 
 find_package(implot CONFIG REQUIRED)
 target_link_libraries(${PROGRAM_NAME} PRIVATE implot::implot)
+
+include_directories( ../../3rd_party/imgui_style )
