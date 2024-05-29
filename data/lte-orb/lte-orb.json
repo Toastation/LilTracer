@@ -1,7 +1,9 @@
 {
   "integrator": {
-    "type": "BrdfIntegrator"
+    "type": "DirectIntegrator",
+    "sample_all_lights": false
   },
+  "max_sample" : 100,
   "brdf": [
     {
       "type": "Diffuse",

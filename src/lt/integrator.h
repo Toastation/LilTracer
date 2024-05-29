@@ -161,13 +161,25 @@ public:
             return Spectrum(0.);
 
         int light_idx = std::min((int)(sampler.next_float() * n_light), n_light - 1);
-        Float light_pdf = (Float)(1.) / n_light;
 
         const std::shared_ptr<Light>& light = light_idx < scene.lights.size()
             ? scene.lights[light_idx]
             : scene.infinite_lights[n_light - light_idx - 1];
 
-        return estimate_direct(r, si, light, scene, sampler)  / light_pdf;
+        return estimate_direct(r, si, light, scene, sampler) * Float(n_light);
+    }
+
+    Spectrum uniform_sample_all_light(Ray& r, SurfaceInteraction& si,
+        Scene& scene, Sampler& sampler) 
+    {
+        Spectrum contrib = Spectrum(0.);      
+        for (int i = 0; i < scene.lights.size(); ++i) {
+            contrib += estimate_direct(r, si, scene.lights[i], scene, sampler);
+        }
+        for (int i = 0; i < scene.infinite_lights.size(); ++i) {
+            contrib += estimate_direct(r, si, scene.infinite_lights[i], scene, sampler);
+        }
+        return contrib;
     }
 
     /**
@@ -183,7 +195,7 @@ public:
         const std::shared_ptr<Light>& light, Scene& scene,
         Sampler& sampler)
     {
-        vec3 contrib = vec3(0.);
+        Spectrum contrib = vec3(0.);
         
         si.pos -= r.d * 0.00001f;
 
@@ -195,10 +207,10 @@ public:
         Ray rs(si.pos,-ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
-
             if (wi.z < 0.00001)
                 return contrib;
-            vec3 brdf_contrib = si.brdf->eval(wi, wo, sampler);
+
+            Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
             #if defined(USE_MIS)
             if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
@@ -319,7 +331,8 @@ protected:
 class DirectIntegrator : public Integrator {
 public:
     DirectIntegrator()
-        : Integrator("DirectIntegrator")
+        : Integrator("DirectIntegrator"),
+        sample_all_lights(true)
     {
         link_params();
     };
@@ -339,7 +352,7 @@ public:
             if (si.brdf->is_emissive())
                 return si.brdf->emission();
 
-            s += uniform_sample_one_light(r, si, scene, sampler);
+            s += sample_all_lights ? uniform_sample_all_light(r, si, scene, sampler) : uniform_sample_one_light(r, si, scene, sampler);
         } else {
             for (const auto& light : scene.infinite_lights)
                 s += light->eval(r.d);
@@ -348,8 +361,12 @@ public:
         return s;
     }
 
+    bool sample_all_lights;
+
 protected:
-    void link_params() { }
+    void link_params() {
+        params.add("sample_all_lights", lt::Params::Type::BOOL, &sample_all_lights);
+    }
 };
 
 /**
@@ -359,7 +376,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , max_depth(8)
+        , max_depth(1)
     {
         link_params();
     };
