@@ -8,6 +8,8 @@
 #include <lt/serialize.h>
 #include <lt/factory.h>
 
+#include <atomic>
+
 namespace LT_NAMESPACE {
 
 /**
