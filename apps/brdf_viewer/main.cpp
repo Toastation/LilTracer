@@ -11,7 +11,7 @@
 #include <imgui_impl_opengl3.h>
 #include <implot.h>
 
-#include <embrace_the_darkness.h>
+#include <lil_tracer_theme.h>
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -877,7 +877,7 @@ int main(int, char**)
 
     //ImGui::StyleColorsDark();
 
-    embraceTheDarkness();
+    lil_tracer_theme();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
