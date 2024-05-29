@@ -1,9 +1,12 @@
 # General pathtracer on CPU
 
+Warning, the project is young and in development, there are BUGS and errors ...
+
 ## Applications
 - lil_tracer
 - brdf_viewer
 - envmap_sampling
+- convergence
 
 # Packages requirements
 - [glm](https://github.com/g-truc/glm)
@@ -16,16 +19,40 @@
 - [fast_obj](https://github.com/thisistherk/fast_obj)
 - [tinyexr](https://github.com/syoyo/tinyexr)
 
+fast_obj and tiny_exr are already inside the depo.
+
 # Windows install
 
 ## Install packages using [vcpkg](https://vcpkg.io/en/)
 
-```vcpkg install glm:x64-windows nlohmann-json:x64-windows embree3:x64-windows glfw3:x64-windows imgui[core,opengl3-binding,glfw-binding]:x64-windows implot:x64-windows miniz:x64-windows```
- 
+I recommand using vcpkg to download the others packages.
+Once vcpkg installed, and available in the path, you can run the following commmand :
+```c
+./install_packages_windows.bat
+```
+Note that Embree takes forever to download, compile, and install.
 
-## TODO
-- [ ] Path integrator
-- [ ] Sampling windows
-- [ ] Performance evaluation
-- [ ] Brdf python binding
+# Run on Windows (powershell)
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=./path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
+```
 
+# Linux install
+
+## Install packages using [vcpkg](https://vcpkg.io/en/)
+
+The same as for Windows, you need to install vcpkg. The you can run the following command :
+```c
+./install_packages_windows.sh
+```
+or install each packages by hand.
+
+# Run on Linux
+
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=./path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
+```
