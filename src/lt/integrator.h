@@ -14,7 +14,7 @@
 #include <chrono>
 
 //#define SAMPLE_OPTIM
-#define USE_MIS
+//#define USE_MIS
 namespace LT_NAMESPACE {
 
 inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
@@ -228,16 +228,13 @@ public:
             #else
             Spectrum light_fac = ls.emission / ls.pdf;
             contrib += light_fac * brdf_contrib;
-            assert(ls.pdf > 0.);
             #endif
         }
-        assert(contrib == contrib);
-
 
         #if defined(USE_MIS)
         if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
-            if (wi.z < 0.00001) {
+            if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
                 return contrib;
             }
 
@@ -246,11 +243,10 @@ public:
             Float weight = 1.0f;
 
             //if (sample_not_specular) {
+                Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
                 Float light_pdf = light->pdf(si.pos, si.to_world(bs.wo));
-                Float brdf_pdf = si.brdf->pdf(wi,bs.wo);
 
                 if (light_pdf == 0) {
-                    std::cout << "light_pdf = 0" << std::endl;
                     return contrib;
                 }
 
@@ -260,17 +256,9 @@ public:
                 assert(bs.value == bs.value);
 
             //}
-
-            // vec3 emission = vec3(0.);
-            std::cout << "brdf_pdf: " << brdf_pdf << std::endl;
-            std::cout << "bs.value: " << bs.value.x << ", " << bs.value.y << ", " << bs.value.z << std::endl;
-            std::cout << "weight: " << weight << std::endl;
-            
             contrib += weight * bs.value * ls.emission / brdf_pdf;
         }
         #endif
-        std::cout << "contrib: " << contrib.x << ", " << contrib.y << ", " << contrib.z << std::endl;
-        assert(contrib == contrib);
         return contrib;
     }
 
@@ -444,6 +432,7 @@ public:
                 Float wo_pdf = si.brdf->pdf(wi, bs.wo);
                 Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo, sampler);
                 throughput *= brdf_cos_weighted / wo_pdf;
+                assert(throughput == throughput);
                 #else
                 throughput *= bs.value;
                 #endif
