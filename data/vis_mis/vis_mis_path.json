@@ -3,7 +3,7 @@
     "type": "PathIntegrator",
     "max_depth" : 1  
   },
-  "max_sample" :  4,
+  "max_sample" :  30,
   "brdf": [
     {
       "type": "RoughGGX",

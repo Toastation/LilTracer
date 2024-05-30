@@ -238,9 +238,13 @@ public:
                 return contrib;
             }
 
-            // bs.wo.z can be negative!
-
             Float weight = 1.0f;
+
+            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            SurfaceInteraction si_;
+            if (!scene.intersect(r_, si_) || !si_.brdf->is_emissive()) {
+                return contrib;
+            }
 
             //if (sample_not_specular) {
                 Float brdf_pdf = si.brdf->pdf(wi, bs.wo);

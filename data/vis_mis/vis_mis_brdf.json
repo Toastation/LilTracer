@@ -3,7 +3,7 @@
     "type": "BrdfIntegrator",
     "max_depth": 1
   },
-  "max_sample": 100,
+  "max_sample": 1000,
   "brdf": [
     {
       "type": "RoughGGX",
