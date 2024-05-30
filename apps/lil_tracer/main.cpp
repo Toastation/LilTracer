@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
             time += t;
 
-            printProgress(double(s) / double(ren.max_sample - 1.0), t);
+            // printProgress(double(s) / double(ren.max_sample - 1.0), t);
         }
 
         std::cout << "\nTime elapsed : " << time << " (ms) " << std::endl;
