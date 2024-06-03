@@ -12,6 +12,7 @@
 #include <lt/sensor.h>
 
 #include <thread>
+#include <atomic>
 
 namespace LT_NAMESPACE {
 

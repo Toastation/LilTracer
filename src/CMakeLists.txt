@@ -32,6 +32,3 @@ target_link_libraries(${PROGRAM_NAME}  PRIVATE nlohmann_json nlohmann_json::nloh
 
 find_package(embree 3 CONFIG REQUIRED)
 target_link_libraries(${PROGRAM_NAME} PRIVATE embree)
-
-# find_package(TBB CONFIG REQUIRED)
-# target_link_libraries(${PROGRAM_NAME} PRIVATE TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy)

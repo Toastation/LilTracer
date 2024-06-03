@@ -9,6 +9,8 @@
 #include <lt/factory.h>
 #include <atomic>
 
+#include <atomic>
+
 namespace LT_NAMESPACE {
 
 /**

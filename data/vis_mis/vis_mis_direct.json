@@ -2,7 +2,7 @@
   "integrator": {
     "type": "DirectIntegrator"
   },
-  "max_sample": 4,
+  "max_sample": 200,
   "brdf": [
     {
       "type": "RoughGGX",

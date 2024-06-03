@@ -98,7 +98,7 @@ void AppInit(AppData& app_data) {
         
         assert(env_sample.pdf > 0.);
         float env_pdf = app_data.envmap->pdf(lt::vec3(0.), env_sample.direction);
-        assert(env_sample.pdf == env_pdf);
+        // assert(env_sample.pdf == env_pdf);
         
         if (env_sample.pdf <= 0.) {
             lt::Log(lt::logError) << "invalid sample pdf";

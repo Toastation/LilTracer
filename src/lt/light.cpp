@@ -61,7 +61,6 @@ namespace LT_NAMESPACE {
         Float solid_angle = 1.;
 #endif // 0
 #if 1
-        std::cout << "in envmap sample" << std::endl;
         Float u = sampler.next_float();
 
         // Binary search
@@ -81,11 +80,11 @@ namespace LT_NAMESPACE {
 
         Float solid_angle = sin(theta) * dphi * dtheta;
 
-
         theta += dtheta * (sampler.next_float() - 0.5);
         phi += dphi * (sampler.next_float() - 0.5);
 
         s.direction = -vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+
         s.pdf = density.get(x, y) / solid_angle;
         //s.pdf = pdf(vec3(0.), s.direction);
         //s.pdf = density.data[id];
@@ -107,11 +106,12 @@ namespace LT_NAMESPACE {
 
     Float EnvironmentLight::pdf(const vec3& p, const vec3& ld)
     {
-        Float phi = glm::atan(ld.z, ld.x);
+        vec3 dir = -ld;
+        Float phi = glm::atan(dir.z, dir.x);
         phi = (phi < 0. ? 2 * pi + phi : phi);
         Float u = phi / (2 * pi);
-        Float v = glm::acos(ld.y) / pi;
-        Float solid_angle = sin(std::sqrt(1. - ld.y * ld.y)) * dphi * dtheta;
+        Float v = glm::acos(dir.y) / pi;
+        Float solid_angle = std::sqrt(1. - dir.y * dir.y) * dphi * dtheta;
         return density.eval(u, v) / solid_angle;
     }
 

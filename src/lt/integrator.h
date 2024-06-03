@@ -64,7 +64,7 @@ public:
 #if 1
         int block_size = 16;
         //std::cout << "in" << std::endl;
-//#pragma omp parallel for collapse(2) schedule(dynamic)
+#pragma omp parallel for collapse(2) schedule(dynamic)
         for (int h = 0; h < sensor->h / block_size + 1; h++)
             for (int w = 0; w < sensor->w / block_size + 1; w++) {
                 Sampler s;
@@ -202,6 +202,7 @@ public:
         Light::Sample ls = light->sample(si, sampler);
         assert(ls.pdf > 0.);
 
+
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 
@@ -211,28 +212,25 @@ public:
             if (wi.z < 0.00001) {
                 return contrib;
             }
-
             Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
-            std::cout << "-------------" << std::endl;
-
-            std::cout << "LS emission: " << ls.emission.x << ", " << ls.emission.y << ", " << ls.emission.z << std::endl;
-            std::cout << "LS pdf: " << ls.pdf << std::endl;
-            std::cout << "brdf_contrib: " << brdf_contrib.x << ", " << brdf_contrib.y << ", " << brdf_contrib.z << std::endl;
             #if defined(USE_MIS)
             if (light->is_dirac()) {
-                std::cout << "DIRAC" << std::endl;
                 contrib += brdf_contrib * ls.emission / ls.pdf;
             } else {
-                std::cout << "NOT DIRAC" << std::endl;
                 Float brdf_pdf = si.brdf->pdf(wi, wo);
-                std::cout << "brdf pdf: " << brdf_pdf << std::endl;
                 assert(brdf_pdf == brdf_pdf);
                 Float weight = power_heuristic(ls.pdf, brdf_pdf);
                 assert(weight == weight);
                 assert(ls.pdf > 0.0);
-                std::cout << "weight: " << weight << std::endl; 
+
+                // std::cout << "ls emission: " << ls.emission.x << ", " << ls.emission.y << ", " << ls.emission.z << std::endl;
+                // std::cout << "ls pdf: " << ls.pdf << std::endl;
+                // std::cout << "brdf_contrib: " << brdf_contrib.x << ", " << brdf_contrib.y << ", " << brdf_contrib.z << std::endl;
+                // std::cout << "weight: " << weight << std::endl;
+                // std::cout << "-------" << std::endl;
+
                 contrib += 1.0f * brdf_contrib * ls.emission / ls.pdf;
-                std::cout << "contrib: " << contrib.x << ", " << contrib.y << ", " << contrib.z << std::endl;
+                // std::cout << "contrib: " << contrib.x << ", " << contrib.y << ", " << contrib.z << std::endl;
                 assert(contrib == contrib);
             }
             #else
