@@ -1,6 +1,6 @@
 {
   "integrator": {
-    "type": "BrdfIntegrator",
+    "type": "DirectIntegrator",
     "sample_all_lights": false
   },
   "max_sample" : 100,
@@ -26,7 +26,7 @@
     "texture": "../envmaps/hallstatt4_hd.exr",
     "intensity": 1.0
   },
-  "light": [
+  "nlight": [
     {
       "type": "DirectionnalLight",
       "intensity": 1.0,

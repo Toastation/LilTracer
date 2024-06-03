@@ -14,7 +14,7 @@
 #include <chrono>
 
 //#define SAMPLE_OPTIM
-//#define USE_MIS
+#define USE_MIS
 namespace LT_NAMESPACE {
 
 inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
@@ -64,7 +64,7 @@ public:
 #if 1
         int block_size = 16;
         //std::cout << "in" << std::endl;
-#pragma omp parallel for collapse(2) schedule(dynamic)
+//#pragma omp parallel for collapse(2) schedule(dynamic)
         for (int h = 0; h < sensor->h / block_size + 1; h++)
             for (int w = 0; w < sensor->w / block_size + 1; w++) {
                 Sampler s;
@@ -213,16 +213,26 @@ public:
             }
 
             Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
+            std::cout << "-------------" << std::endl;
+
+            std::cout << "LS emission: " << ls.emission.x << ", " << ls.emission.y << ", " << ls.emission.z << std::endl;
+            std::cout << "LS pdf: " << ls.pdf << std::endl;
+            std::cout << "brdf_contrib: " << brdf_contrib.x << ", " << brdf_contrib.y << ", " << brdf_contrib.z << std::endl;
             #if defined(USE_MIS)
             if (light->is_dirac()) {
+                std::cout << "DIRAC" << std::endl;
                 contrib += brdf_contrib * ls.emission / ls.pdf;
             } else {
+                std::cout << "NOT DIRAC" << std::endl;
                 Float brdf_pdf = si.brdf->pdf(wi, wo);
+                std::cout << "brdf pdf: " << brdf_pdf << std::endl;
                 assert(brdf_pdf == brdf_pdf);
                 Float weight = power_heuristic(ls.pdf, brdf_pdf);
                 assert(weight == weight);
                 assert(ls.pdf > 0.0);
-                contrib += weight * brdf_contrib * ls.emission / ls.pdf;
+                std::cout << "weight: " << weight << std::endl; 
+                contrib += 1.0f * brdf_contrib * ls.emission / ls.pdf;
+                std::cout << "contrib: " << contrib.x << ", " << contrib.y << ", " << contrib.z << std::endl;
                 assert(contrib == contrib);
             }
             #else
@@ -232,36 +242,65 @@ public:
         }
 
         #if defined(USE_MIS)
-        if (!light->is_dirac()) {
-            Brdf::Sample bs = si.brdf->sample(wi, sampler);
-            if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
-                return contrib;
-            }
+        // if (!light->is_dirac()) {
+        //     Brdf::Sample bs = si.brdf->sample(wi, sampler);
+        //     if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
+        //         return contrib;
+        //     }
 
-            Float weight = 1.0f;
+        //     Float weight = 1.0f;
 
-            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
-            SurfaceInteraction si_;
-            if (!scene.intersect(r_, si_) || !si_.brdf->is_emissive()) {
-                return contrib;
-            }
+        //     //if (sample_not_specular) {
+        //         Float light_pdf = light->pdf(si.pos, si.to_world(bs.wo));
+        //         if (light_pdf == 0) {
+        //             return contrib;
+        //         }
 
-            //if (sample_not_specular) {
-                Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
-                Float light_pdf = light->pdf(si.pos, si.to_world(bs.wo));
+        //         Spectrum emission = Spectrum(0.0);
 
-                if (light_pdf == 0) {
-                    return contrib;
-                }
+        //         Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+        //         SurfaceInteraction si_;
 
-                assert(light_pdf != 0 || brdf_pdf != 0);
-                weight = power_heuristic(brdf_pdf, light_pdf);
-                assert(weight == weight);
-                assert(bs.value == bs.value);
+        //         // if (light->geometry_id() != RTC_INVALID_GEOMETRY_ID) {
+        //         //     if (scene.intersect(r_, si_) && si_.brdf->is_emissive()) {
+        //         //         emission = light->eval(-si.to_world(bs.wo));
+        //         //     } else {
+        //         //         return contrib;
+        //         //     }
+        //         // } else {
+        //         //     emission = light->eval(si.to_world(bs.wo));
+        //         // }
 
-            //}
-            contrib += weight * bs.value * ls.emission / brdf_pdf;
-        }
+        //         // if (scene.intersect(r_, si_) && si_.brdf->is_emissive()) { // found intersection w/ an area light
+        //         //     if (si_.geom_id == light->geometry_id()) {
+        //         //         emission = light->eval(-si.to_world(bs.wo)); 
+        //         //     }
+        //         //     return contrib;
+        //         // } else {
+        //         //     emission = light->eval(si.to_world(bs.wo));
+        //         //     //return contrib;
+        //         // }
+
+        //         bool areaLight = light->geometry_id() != RTC_INVALID_GEOMETRY_ID;
+        //         if (areaLight && (!scene.intersect(r_, si_) || !si_.brdf->is_emissive() || light->geometry_id() != si_.geom_id)) {
+        //             return contrib;
+        //         }
+
+        //         if (areaLight) {
+        //             emission = light->eval(si.to_world(bs.wo));
+        //         } else {
+        //             emission = light->eval(si.to_world(bs.wo));
+        //         }
+
+        //         Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
+        //         assert(light_pdf != 0 || brdf_pdf != 0);
+        //         weight = power_heuristic(brdf_pdf, light_pdf);
+        //         assert(weight == weight);
+        //         assert(bs.value == bs.value);
+
+        //     //}
+        //     contrib += weight * bs.value * emission / brdf_pdf;
+        // }
         #endif
         return contrib;
     }

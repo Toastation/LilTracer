@@ -61,6 +61,7 @@ namespace LT_NAMESPACE {
         Float solid_angle = 1.;
 #endif // 0
 #if 1
+        std::cout << "in envmap sample" << std::endl;
         Float u = sampler.next_float();
 
         // Binary search
@@ -221,8 +222,6 @@ namespace LT_NAMESPACE {
         Float solid_angle = 2. * pi * (1 - cos_theta_max);
         return 1. / solid_angle;
     }
-
-    int SphereLight::geometry_id() { return sphere->rtc_id; }
 
 
 } // namespace LT_NAMESPACE

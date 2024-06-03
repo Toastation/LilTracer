@@ -48,6 +48,7 @@ public:
             si.brdf = geom->brdf;
             si.pos = r.o + r.d * si.t;
             si.nor = geom->get_normal(rayhit, si.pos);
+            si.geom_id = geom_id;
             // si.nor = vec3(rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z);
 
             si.finalize();
