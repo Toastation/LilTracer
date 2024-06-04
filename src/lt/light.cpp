@@ -95,6 +95,12 @@ namespace LT_NAMESPACE {
         return s;
     }
 
+    /**
+     * @brief 
+     * 
+     * @param direction Toward the envmap
+     * @return Spectrum 
+     */
     Spectrum EnvironmentLight::eval(const vec3& direction)
     {
         Float phi = glm::atan(direction.z, direction.x);
@@ -104,6 +110,13 @@ namespace LT_NAMESPACE {
         return envmap.eval(u, v) * intensity;
     }
 
+    /**
+     * @brief 
+     * 
+     * @param p 
+     * @param ld Toward the scene
+     * @return Float 
+     */
     Float EnvironmentLight::pdf(const vec3& p, const vec3& ld)
     {
         vec3 dir = -ld;
@@ -111,7 +124,7 @@ namespace LT_NAMESPACE {
         phi = (phi < 0. ? 2 * pi + phi : phi);
         Float u = phi / (2 * pi);
         Float v = glm::acos(dir.y) / pi;
-        Float solid_angle = std::sqrt(1. - dir.y * dir.y) * dphi * dtheta;
+        Float solid_angle = std::sqrt(glm::clamp(1.0f - dir.y * dir.y, 0.000001f, 1.0f)) * dphi * dtheta;
         return density.eval(u, v) / solid_angle;
     }
 

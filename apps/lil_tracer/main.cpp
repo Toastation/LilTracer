@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
         std::cout << "\nTime elapsed : " << time << " (ms) " << std::endl;
 
         if (lt::save_sensor_exr(*ren.sensor, std::string(argv[a]) + ".exr") == 0) {
-
+            
         }
         
     }

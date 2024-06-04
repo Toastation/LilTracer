@@ -1,8 +1,9 @@
 {
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "BrdfIntegrator",
+    "max_depth": 1
   },
-  "max_sample": 200,
+  "max_sample": 100,
   "brdf": [
     {
       "type": "RoughGGX",
@@ -80,7 +81,7 @@
   ],
   "background": {
     "type": "EnvironmentLight",
-    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
+    "texture": "../envmaps/hallstatt4_hd.exr",
     "intensity": 1.0
   },
   "sensor": {

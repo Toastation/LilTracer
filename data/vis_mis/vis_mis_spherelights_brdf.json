@@ -1,0 +1,117 @@
+{
+  "integrator": {
+    "type": "BrdfIntegrator",
+    "max_depth": 1
+  },
+  "max_sample": 100,
+  "brdf": [
+    {
+      "type": "RoughGGX",
+      "name": "plane1",
+      "rough_x": 0.5,
+      "rough_y": 0.5
+    },
+    {
+      "type": "RoughGGX",
+      "name": "plane2",
+      "rough_x": 0.1,
+      "rough_y": 0.1
+    },
+    {
+      "type": "RoughGGX",
+      "name": "plane3",
+      "rough_x": 0.01,
+      "rough_y": 0.01
+    },
+    {
+      "type": "RoughGGX",
+      "name": "plane4",
+      "rough_x": 0.001,
+      "rough_y": 0.001
+    },
+    {
+      "type": "Diffuse",
+      "name": "floor",
+      "albedo": [ 0.3, 0.3, 0.3 ]
+    },
+    {
+      "type": "Emissive",
+      "name": "sphere_brdf",
+      "intensity": [ 100.0, 100.0, 100.0 ]
+    }
+  ],
+  "geometries": [
+    {
+      "type": "Mesh",
+      "brdf": "plane1",
+      "filename": "plane1.obj"
+    },
+    {
+      "type": "Mesh",
+      "brdf": "plane2",
+      "filename": "plane2.obj"
+    },
+    {
+      "type": "Mesh",
+      "brdf": "plane3",
+      "filename": "plane3.obj"
+    },
+    {
+      "type": "Mesh",
+      "brdf": "plane4",
+      "filename": "plane4.obj"
+    },
+    {
+      "type": "Mesh",
+      "brdf": "floor",
+      "filename": "studio.obj"
+    },
+    {
+      "type": "Sphere",
+      "brdf": "sphere_brdf",
+      "pos": [ 0.4, 0.7, 0.5 ],
+      "rad": 0.015221
+    },
+    {
+      "type": "Sphere",
+      "brdf": "sphere_brdf",
+      "pos": [ 0.0, 0.7, 0.5 ],
+      "rad": 0.075804
+    },
+    {
+      "type": "Sphere",
+      "brdf": "sphere_brdf",
+      "pos": [ -0.4, 0.7, 0.5 ],
+      "rad": 0.144387
+    }
+  ],
+  "nlight": [
+    {
+      "type": "DirectionnalLight",
+      "intensity": 1.0,
+      "dir": [ 0.0, -1.0, 1.0 ]
+    },
+    {
+      "type": "DirectionnalLight",
+      "intensity": 1.0,
+      "dir": [ 1.0, -1.0, 1.0 ]
+    }
+  ],
+  "nbackground": {
+    "type": "EnvironmentLight",
+    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
+    "intensity": 1.0
+  },
+  "sensor": {
+    "type": "Sensor",
+    "width": 1080,
+    "height": 720
+  },
+  "camera": {
+    "type": "PerspectiveCamera",
+    "fov": 25,
+    "aspect": 1.5,
+    "center": [ 0.0, 0.481935, -0.331243 ],
+    "pos": [ 0.0, 1.12458, -2.59721 ]
+  }
+}

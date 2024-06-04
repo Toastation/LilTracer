@@ -169,6 +169,14 @@ public:
         return estimate_direct(r, si, light, scene, sampler) * Float(n_light);
     }
 
+    /**
+     * @brief Estimates direct lighting contribution from all light sources.
+     * @param r The ray representing the pixel.
+     * @param si Surface interaction data.
+     * @param scene The scene to render.
+     * @param sampler The sampler used for sampling.
+     * @return The estimated direct lighting contribution.
+     */
     Spectrum uniform_sample_all_light(Ray& r, SurfaceInteraction& si,
         Scene& scene, Sampler& sampler) 
     {
@@ -222,15 +230,7 @@ public:
                 Float weight = power_heuristic(ls.pdf, brdf_pdf);
                 assert(weight == weight);
                 assert(ls.pdf > 0.0);
-
-                // std::cout << "ls emission: " << ls.emission.x << ", " << ls.emission.y << ", " << ls.emission.z << std::endl;
-                // std::cout << "ls pdf: " << ls.pdf << std::endl;
-                // std::cout << "brdf_contrib: " << brdf_contrib.x << ", " << brdf_contrib.y << ", " << brdf_contrib.z << std::endl;
-                // std::cout << "weight: " << weight << std::endl;
-                // std::cout << "-------" << std::endl;
-
-                contrib += 1.0f * brdf_contrib * ls.emission / ls.pdf;
-                // std::cout << "contrib: " << contrib.x << ", " << contrib.y << ", " << contrib.z << std::endl;
+                contrib += weight * brdf_contrib * ls.emission / ls.pdf;
                 assert(contrib == contrib);
             }
             #else
@@ -240,65 +240,41 @@ public:
         }
 
         #if defined(USE_MIS)
-        // if (!light->is_dirac()) {
-        //     Brdf::Sample bs = si.brdf->sample(wi, sampler);
-        //     if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
-        //         return contrib;
-        //     }
+        if (!light->is_dirac()) {
+            Brdf::Sample bs = si.brdf->sample(wi, sampler);
+            if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
+                return contrib;
+            }
 
-        //     Float weight = 1.0f;
+            Float weight = 1.0f;
 
-        //     //if (sample_not_specular) {
-        //         Float light_pdf = light->pdf(si.pos, si.to_world(bs.wo));
-        //         if (light_pdf == 0) {
-        //             return contrib;
-        //         }
+            Float light_pdf = light->pdf(si.pos, -si.to_world(bs.wo));
+            if (light_pdf == 0) {
+                return contrib;
+            }
 
-        //         Spectrum emission = Spectrum(0.0);
+            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            SurfaceInteraction si_;
+            bool intersection = scene.intersect(r_, si_); 
 
-        //         Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
-        //         SurfaceInteraction si_;
+            // Ignore if we intersect a non emissive geometry or a light that is not this specific light
+            if (intersection && (!si_.brdf->is_emissive() || light->geometry_id() != si_.geom_id)) {
+                return contrib;
+            }
 
-        //         // if (light->geometry_id() != RTC_INVALID_GEOMETRY_ID) {
-        //         //     if (scene.intersect(r_, si_) && si_.brdf->is_emissive()) {
-        //         //         emission = light->eval(-si.to_world(bs.wo));
-        //         //     } else {
-        //         //         return contrib;
-        //         //     }
-        //         // } else {
-        //         //     emission = light->eval(si.to_world(bs.wo));
-        //         // }
+            // Ignore if there is no intersection but this specific light is not at infinity
+            if (!intersection && !light->is_infinite()) {
+                return contrib;
+            }
 
-        //         // if (scene.intersect(r_, si_) && si_.brdf->is_emissive()) { // found intersection w/ an area light
-        //         //     if (si_.geom_id == light->geometry_id()) {
-        //         //         emission = light->eval(-si.to_world(bs.wo)); 
-        //         //     }
-        //         //     return contrib;
-        //         // } else {
-        //         //     emission = light->eval(si.to_world(bs.wo));
-        //         //     //return contrib;
-        //         // }
-
-        //         bool areaLight = light->geometry_id() != RTC_INVALID_GEOMETRY_ID;
-        //         if (areaLight && (!scene.intersect(r_, si_) || !si_.brdf->is_emissive() || light->geometry_id() != si_.geom_id)) {
-        //             return contrib;
-        //         }
-
-        //         if (areaLight) {
-        //             emission = light->eval(si.to_world(bs.wo));
-        //         } else {
-        //             emission = light->eval(si.to_world(bs.wo));
-        //         }
-
-        //         Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
-        //         assert(light_pdf != 0 || brdf_pdf != 0);
-        //         weight = power_heuristic(brdf_pdf, light_pdf);
-        //         assert(weight == weight);
-        //         assert(bs.value == bs.value);
-
-        //     //}
-        //     contrib += weight * bs.value * emission / brdf_pdf;
-        // }
+            Spectrum emission = light->eval(si.to_world(bs.wo)); // No difference in light eval between lights at infinity and area lights
+            Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
+            assert(light_pdf != 0 || brdf_pdf != 0);
+            weight = power_heuristic(brdf_pdf, light_pdf);
+            assert(weight == weight);
+            assert(bs.value == bs.value);
+            contrib += weight * bs.value * emission;
+        }
         #endif
         return contrib;
     }
