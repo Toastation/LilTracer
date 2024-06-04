@@ -26,9 +26,9 @@ public:
         : Serializable(type) 
     {
         local_to_world = glm::mat4(1.);
-        local_to_world[0][0] = 2;
-        local_to_world[1][1] = 2;
-        local_to_world[2][2] = 2;
+        local_to_world[0][0] = 1;
+        local_to_world[1][1] = 1;
+        local_to_world[2][2] = 1;
     };
 
     /**
