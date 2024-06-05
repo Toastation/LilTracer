@@ -15,7 +15,7 @@ void printProgress(double percentage, float t) {
 
 int main(int argc, char* argv[])
 {
-    lt::Log::level = lt::logDebug;
+    lt::Log::level = lt::logWarning;
     for (int a = 1; a < argc; a++) {
 
         lt::Renderer ren;
