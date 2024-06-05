@@ -49,6 +49,7 @@ public:
     Float u;
     Float v;
     std::shared_ptr<Brdf> brdf; /**< Pointer to the surface BRDF. */
+    unsigned int geom_id;
 
     glm::mat3 tbn; /**< Tangent-Bitangent-Normal matrix. */
     glm::mat3 inv_tbn; /**< Inverse Tangent-Bitangent-Normal matrix. */

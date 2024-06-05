@@ -1,9 +1,9 @@
 {
   "integrator": {
-    "type": "BrdfIntegrator",
-    "max_depth": 1
+    "type": "PathIntegrator",
+    "max_depth" : 1  
   },
-  "max_sample": 4,
+  "max_sample" :  30,
   "brdf": [
     {
       "type": "RoughGGX",
@@ -85,23 +85,6 @@
       "rad": 0.144387
     }
   ],
-  "nlight": [
-    {
-      "type": "DirectionnalLight",
-      "intensity": 1.0,
-      "dir": [ 0.0, -1.0, 1.0 ]
-    },
-    {
-      "type": "DirectionnalLight",
-      "intensity": 1.0,
-      "dir": [ 1.0, -1.0, 1.0 ]
-    }
-  ],
-  "nbackground": {
-    "type": "EnvironmentLight",
-    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
-    "intensity": 1.0
-  },
   "sensor": {
     "type": "Sensor",
     "width": 1080,

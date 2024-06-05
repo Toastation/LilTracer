@@ -48,6 +48,8 @@ namespace LT_NAMESPACE {
         virtual Spectrum eval(const vec3& direction) = 0;
         virtual Float pdf(const vec3& p, const vec3& ld) = 0;
 
+        virtual int geometry_id() { return RTC_INVALID_GEOMETRY_ID; }
+
         Flags flags;
         inline bool is_dirac() {
             return static_cast<uint16_t>(flags) & static_cast<uint16_t>(Light::Flags::dirac);
@@ -172,7 +174,7 @@ namespace LT_NAMESPACE {
         Spectrum eval(const vec3& direction);
         Float pdf(const vec3& p, const vec3& ld);
 
-        int geometry_id();
+        int geometry_id() override { return sphere->rtc_id; }
 
         std::shared_ptr<Sphere> sphere;
 

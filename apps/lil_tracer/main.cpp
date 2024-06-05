@@ -15,7 +15,7 @@ void printProgress(double percentage, float t) {
 
 int main(int argc, char* argv[])
 {
-
+    lt::Log::level = lt::logDebug;
     for (int a = 1; a < argc; a++) {
 
         lt::Renderer ren;
@@ -30,13 +30,14 @@ int main(int argc, char* argv[])
 
             time += t;
 
-            printProgress(double(s) / double(ren.max_sample),t);
-            
+            printProgress(double(s) / double(ren.max_sample - 1.0), t);
         }
 
-        std::cout << "Time elapsed : " << time << " (ms) " << std::endl;
+        std::cout << "\nTime elapsed : " << time << " (ms) " << std::endl;
 
-        lt::save_sensor_exr(*ren.sensor,std::string(argv[a])+".exr");
+        if (lt::save_sensor_exr(*ren.sensor, std::string(argv[a]) + ".exr") == 0) {
+            
+        }
         
     }
 

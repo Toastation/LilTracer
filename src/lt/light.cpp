@@ -80,11 +80,11 @@ namespace LT_NAMESPACE {
 
         Float solid_angle = sin(theta) * dphi * dtheta;
 
-
         theta += dtheta * (sampler.next_float() - 0.5);
         phi += dphi * (sampler.next_float() - 0.5);
 
         s.direction = -vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+
         s.pdf = density.get(x, y) / solid_angle;
         //s.pdf = pdf(vec3(0.), s.direction);
         //s.pdf = density.data[id];
@@ -95,6 +95,12 @@ namespace LT_NAMESPACE {
         return s;
     }
 
+    /**
+     * @brief 
+     * 
+     * @param direction Toward the envmap
+     * @return Spectrum 
+     */
     Spectrum EnvironmentLight::eval(const vec3& direction)
     {
         Float phi = glm::atan(direction.z, direction.x);
@@ -104,13 +110,21 @@ namespace LT_NAMESPACE {
         return envmap.eval(u, v) * intensity;
     }
 
+    /**
+     * @brief 
+     * 
+     * @param p 
+     * @param ld Toward the scene
+     * @return Float 
+     */
     Float EnvironmentLight::pdf(const vec3& p, const vec3& ld)
     {
-        Float phi = glm::atan(ld.z, ld.x);
+        vec3 dir = -ld;
+        Float phi = glm::atan(dir.z, dir.x);
         phi = (phi < 0. ? 2 * pi + phi : phi);
         Float u = phi / (2 * pi);
-        Float v = glm::acos(ld.y) / pi;
-        Float solid_angle = sin(std::sqrt(1. - ld.y * ld.y)) * dphi * dtheta;
+        Float v = glm::acos(dir.y) / pi;
+        Float solid_angle = std::sqrt(glm::clamp(1.0f - dir.y * dir.y, 0.000001f, 1.0f)) * dphi * dtheta;
         return density.eval(u, v) / solid_angle;
     }
 
@@ -221,8 +235,6 @@ namespace LT_NAMESPACE {
         Float solid_angle = 2. * pi * (1 - cos_theta_max);
         return 1. / solid_angle;
     }
-
-    int SphereLight::geometry_id() { return sphere->rtc_id; }
 
 
 } // namespace LT_NAMESPACE

@@ -14,7 +14,7 @@
 #include <chrono>
 
 //#define SAMPLE_OPTIM
-//#define USE_MIS
+#define USE_MIS
 namespace LT_NAMESPACE {
 
 inline Float power_heuristic(const Float& pdf_1, const Float& pdf_2) {
@@ -161,13 +161,33 @@ public:
             return Spectrum(0.);
 
         int light_idx = std::min((int)(sampler.next_float() * n_light), n_light - 1);
-        Float light_pdf = (Float)(1.) / n_light;
 
         const std::shared_ptr<Light>& light = light_idx < scene.lights.size()
             ? scene.lights[light_idx]
             : scene.infinite_lights[n_light - light_idx - 1];
 
-        return estimate_direct(r, si, light, scene, sampler) / light_pdf;
+        return estimate_direct(r, si, light, scene, sampler) * Float(n_light);
+    }
+
+    /**
+     * @brief Estimates direct lighting contribution from all light sources.
+     * @param r The ray representing the pixel.
+     * @param si Surface interaction data.
+     * @param scene The scene to render.
+     * @param sampler The sampler used for sampling.
+     * @return The estimated direct lighting contribution.
+     */
+    Spectrum uniform_sample_all_light(Ray& r, SurfaceInteraction& si,
+        Scene& scene, Sampler& sampler) 
+    {
+        Spectrum contrib = Spectrum(0.);      
+        for (int i = 0; i < scene.lights.size(); ++i) {
+            contrib += estimate_direct(r, si, scene.lights[i], scene, sampler);
+        }
+        for (int i = 0; i < scene.infinite_lights.size(); ++i) {
+            contrib += estimate_direct(r, si, scene.infinite_lights[i], scene, sampler);
+        }
+        return contrib;
     }
 
     /**
@@ -183,11 +203,13 @@ public:
         const std::shared_ptr<Light>& light, Scene& scene,
         Sampler& sampler)
     {
-        vec3 contrib = vec3(0.);
+        Spectrum contrib = vec3(0.);
         
         si.pos -= r.d * 0.00001f;
 
         Light::Sample ls = light->sample(si, sampler);
+        assert(ls.pdf > 0.);
+
 
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
@@ -195,41 +217,65 @@ public:
         Ray rs(si.pos,-ls.direction);
 
         if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
-
-            if (wi.z < 0.00001)
+            if (wi.z < 0.00001) {
                 return contrib;
-            vec3 brdf_contrib = si.brdf->eval(wi, wo, sampler);
+            }
+            Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
             #if defined(USE_MIS)
             if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
-            }
-            else {
+            } else {
                 Float brdf_pdf = si.brdf->pdf(wi, wo);
+                assert(brdf_pdf == brdf_pdf);
                 Float weight = power_heuristic(ls.pdf, brdf_pdf);
+                assert(weight == weight);
+                assert(ls.pdf > 0.0);
                 contrib += weight * brdf_contrib * ls.emission / ls.pdf;
+                assert(contrib == contrib);
             }
             #else
             Spectrum light_fac = ls.emission / ls.pdf;
             contrib += light_fac * brdf_contrib;
-            assert(ls.pdf > 0.);
             #endif
         }
 
         #if defined(USE_MIS)
         if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
-            Float weight = 1;
+            if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
+                return contrib;
+            }
 
-            //if (sample_not_specular) {
-                Float light_pdf = light->pdf(si.pos,si.to_world(bs.wo));
-                weight = power_heuristic(si.brdf->pdf(wi,bs.wo), light_pdf);
-            //}
+            Float weight = 1.0f;
 
-                vec3 emission = vec3(0.);
-            contrib += bs.value * emission * weight;
+            Float light_pdf = light->pdf(si.pos, -si.to_world(bs.wo));
+            if (light_pdf == 0) {
+                return contrib;
+            }
+
+            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            SurfaceInteraction si_;
+            bool intersection = scene.intersect(r_, si_); 
+
+            // Ignore if we intersect a non emissive geometry or a light that is not this specific light
+            if (intersection && (!si_.brdf->is_emissive() || light->geometry_id() != si_.geom_id)) {
+                return contrib;
+            }
+
+            // Ignore if there is no intersection but this specific light is not at infinity
+            if (!intersection && !light->is_infinite()) {
+                return contrib;
+            }
+
+            Spectrum emission = light->eval(si.to_world(bs.wo)); // No difference in light eval between lights at infinity and area lights
+            Float brdf_pdf = si.brdf->pdf(wi, bs.wo);
+            assert(light_pdf != 0 || brdf_pdf != 0);
+            weight = power_heuristic(brdf_pdf, light_pdf);
+            assert(weight == weight);
+            assert(bs.value == bs.value);
+            contrib += weight * bs.value * emission;
         }
         #endif
-
         return contrib;
     }
 
@@ -262,7 +308,7 @@ public:
             if (depth >= max_depth || si.brdf->is_emissive())
                 return si.brdf->emission();
 
-            // Compute BRDF  contrib
+            // Compute BRDF contrib
             vec3 wi = si.to_local(-r.d);
             if (wi.z < 0.000001)
                 return s;
@@ -318,7 +364,8 @@ protected:
 class DirectIntegrator : public Integrator {
 public:
     DirectIntegrator()
-        : Integrator("DirectIntegrator")
+        : Integrator("DirectIntegrator"),
+        sample_all_lights(false)
     {
         link_params();
     };
@@ -338,7 +385,7 @@ public:
             if (si.brdf->is_emissive())
                 return si.brdf->emission();
 
-            s += uniform_sample_one_light(r, si, scene, sampler);
+            s += sample_all_lights ? uniform_sample_all_light(r, si, scene, sampler) : uniform_sample_one_light(r, si, scene, sampler);
         } else {
             for (const auto& light : scene.infinite_lights)
                 s += light->eval(r.d);
@@ -347,8 +394,12 @@ public:
         return s;
     }
 
+    bool sample_all_lights;
+
 protected:
-    void link_params() { }
+    void link_params() {
+        params.add("sample_all_lights", lt::Params::Type::BOOL, &sample_all_lights);
+    }
 };
 
 /**
@@ -358,7 +409,7 @@ class PathIntegrator : public Integrator {
 public:
     PathIntegrator()
         : Integrator("PathIntegrator")
-        , max_depth(8)
+        , max_depth(10)
     {
         link_params();
     };
@@ -398,6 +449,7 @@ public:
                 Float wo_pdf = si.brdf->pdf(wi, bs.wo);
                 Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo, sampler);
                 throughput *= brdf_cos_weighted / wo_pdf;
+                assert(throughput == throughput);
                 #else
                 throughput *= bs.value;
                 #endif

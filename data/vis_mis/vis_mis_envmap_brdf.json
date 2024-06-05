@@ -1,8 +1,9 @@
 {
   "integrator": {
-    "type": "DirectIntegrator"
+    "type": "BrdfIntegrator",
+    "max_depth": 1
   },
-  "max_sample": 4,
+  "max_sample": 100,
   "brdf": [
     {
       "type": "RoughGGX",
@@ -64,24 +65,6 @@
       "type": "Mesh",
       "brdf": "floor",
       "filename": "studio.obj"
-    },
-    {
-      "type": "Sphere",
-      "brdf": "sphere_brdf",
-      "pos": [ 0.4, 0.7, 0.5 ],
-      "rad": 0.015221
-    },
-    {
-      "type": "Sphere",
-      "brdf": "sphere_brdf",
-      "pos": [ 0.0, 0.7, 0.5 ],
-      "rad": 0.075804
-    },
-    {
-      "type": "Sphere",
-      "brdf": "sphere_brdf",
-      "pos": [ -0.4, 0.7, 0.5 ],
-      "rad": 0.144387
     }
   ],
   "nlight": [
@@ -96,9 +79,9 @@
       "dir": [ 1.0, -1.0, 1.0 ]
     }
   ],
-  "nbackground": {
+  "background": {
     "type": "EnvironmentLight",
-    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
+    "texture": "../envmaps/hallstatt4_hd.exr",
     "intensity": 1.0
   },
   "sensor": {
