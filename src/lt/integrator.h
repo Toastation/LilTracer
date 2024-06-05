@@ -210,7 +210,6 @@ public:
         Light::Sample ls = light->sample(si, sampler);
         assert(ls.pdf > 0.);
 
-
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 

@@ -232,7 +232,7 @@ namespace LT_NAMESPACE {
     {
         Float dist = (sphere->pos - p).length();
         Float cos_theta_max = std::sqrt(std::max(dist * dist - sphere->rad * sphere->rad, 0.0f)) / dist;
-        Float solid_angle = 2. * pi * (1 - cos_theta_max);
+        Float solid_angle = 2. * pi * std::max((1 - cos_theta_max), 0.0f);
         return 1. / solid_angle;
     }
 

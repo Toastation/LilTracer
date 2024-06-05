@@ -23,7 +23,7 @@ void PerspectiveCamera::init()
 
 Ray PerspectiveCamera::generate_ray(Float u, Float v)
 {
-    glm::vec4 d_eye = inv_proj * glm::vec4(u, v, -1., 1.);
+    glm::vec4 d_eye = inv_proj * glm::vec4(u / aspect, v / aspect, -1., 1.);
     d_eye.w = 0.;
 
     vec3 d = glm::vec3(inv_view * d_eye);

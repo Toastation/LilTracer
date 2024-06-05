@@ -21,6 +21,7 @@ int main(int argc, char* argv[])
         lt::Renderer ren;
         lt::Scene scn;
 
+
         lt::generate_from_path(argv[a], scn, ren);
 
         float time = 0.;
