@@ -45,30 +45,24 @@ namespace LT_NAMESPACE {
             validation.directional_albedo.resize(number_of_theta);
             validation.sampling_difference.resize(number_of_theta);
             validation.thetas = lt::linspace<float>(0, 0.5 * lt::pi, number_of_theta);
+            validation.energy_conservative = true;
+
+            // wo Buffer resolution
+            const int res_theta_sampling = 64;
+            const int res_phi_sampling = 4 * res_theta_sampling;
+            const float dtheta = 0.5 * lt::pi / res_theta_sampling;
+            const float dphi = 2. * lt::pi / res_phi_sampling;
 
 
+            // Loop over all incident angles
             for (int i = 0; i < number_of_theta; i++) {
-            
-                    // Check if there is negative values
-
-
-                // Check if all directional albedo are < 1 (energy conservative)
-
-
-                // Test specific directions to found nan
-                // wi = wo
-
-
-                // Test reciprocity
-
-
-                // Test sampling
-
+                
+                // Initiate data
                 Float theta_i = validation.thetas[i];
                 Float phi_i = 0.;
-                int res_theta_sampling = 64;
-                int res_phi_sampling = 4 * res_theta_sampling;
+                lt::vec3 wi = lt::polar_to_card(theta_i, phi_i);
             
+                
                 std::vector<float> th = lt::linspace<float>(0, 0.5 * lt::pi, res_theta_sampling);
                 std::vector<float> ph = lt::linspace<float>(0, 2. * lt::pi, res_phi_sampling);
 
@@ -81,10 +75,19 @@ namespace LT_NAMESPACE {
                 Sensor diff_buf(res_phi_sampling, res_theta_sampling);
                 diff_buf.init();
 
-                lt::vec3 wi = lt::polar_to_card(theta_i, phi_i);
 
                 Sampler sampler;
+
                 Float directional_albedo = Float(0.);
+                
+                // Check if there is negative values
+                // Test specific directions to found nan
+                // wi = wo
+                // Test reciprocity
+                // Test sampling
+
+
+                //Validate the energy
                 for (int j = 0; j < number_of_sample; j++) {
                     Brdf::Sample sample = brdf.sample(wi, sampler);
                     vec3 wo = sample.wo;
@@ -100,10 +103,14 @@ namespace LT_NAMESPACE {
                         accu_buf.sum_counts++;
                     }
                 }
-
+                
                 directional_albedo /= number_of_sample;
+                // Check if brdf is energy conservative
+                if (directional_albedo > 1.)
+                    validation.energy_conservative = false;
 
 
+                //Validate the sampling
                 for (int j = 0; j < number_of_sample; j++) {
                     lt::vec3 wo = lt::square_to_cosine_hemisphere(sampler.next_float(), sampler.next_float());
                     float phi = std::atan2(wo.y, wo.x);
@@ -122,10 +129,7 @@ namespace LT_NAMESPACE {
                 }
 
 
-                float dtheta = 0.5 * lt::pi / res_theta_sampling;
-                float dphi = 2. * lt::pi / res_phi_sampling;
                 float sum_diff = 0.;
-                
                 for (int x = 0; x < res_phi_sampling; x++) {
                     for (int y = 0; y < res_theta_sampling; y++) {
                         lt::vec3 wo = lt::polar_to_card(th[y], ph[x] );
@@ -134,14 +138,23 @@ namespace LT_NAMESPACE {
                     }
                 }
 
+                float T = 0;
+                for (int y = 0; y < res_theta_sampling; y++) {
+                    for (int x = 0; x < res_phi_sampling; x++) {
+                        float approx_pdf = accu_buf.get(x, y).x;
+                        float pdf        = pdf_buf.get(x, y).x;
+                        if(pdf > 0.)
+                            T += (approx_pdf - pdf) * (approx_pdf - pdf) / pdf ;
+                    }
+                    std::cout << std::endl;
+                }
+                int Dof = res_theta_sampling * res_phi_sampling - 1;
+                float chi2 = chisqr(Dof, T);
+                
+                validation.correct_sampling = false;
+                
+                validation.sampling_difference[i] = chi2;
 
-                //for (int y = 0; y < res_theta_sampling; y++) {
-                //    for (int x = 0; x < res_phi_sampling; x++) {
-                //        std::cout << brdf_buf.get(x, y).x << " ";
-                //    }
-                //    std::cout << std::endl;
-                //}
-                validation.sampling_difference[i] = sum_diff;
                 validation.directional_albedo[i] = directional_albedo;
             }
 

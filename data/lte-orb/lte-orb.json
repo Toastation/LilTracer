@@ -1,9 +1,10 @@
 {
   "integrator": {
-    "type": "BrdfIntegrator",
-    "sample_all_lights": false
+    "type": "PathIntegrator",
+    "sample_all_lights": false,
+    "max_depth" : 8
   },
-  "max_sample" : 100,
+  "max_sample" : 10,
   "brdf": [
     {
       "type": "Diffuse",
@@ -23,8 +24,8 @@
   ],
   "background": {
     "type": "EnvironmentLight",
-    "texture": "../envmaps/hallstatt4_hd.exr",
-    "intensity": 1.0
+    "texture": "../envmaps/kloofendal_48d_partly_cloudy_puresky_1k.exr",
+    "intensity": 0.5
   },
   "nlight": [
     {
@@ -74,7 +75,7 @@
     "type": "PerspectiveCamera",
     "fov": 40,
     "aspect": 1.5,
-    "center": [ 0.0, 0.1, 0.0 ],
-    "pos": [ -0.118722, 0.415848, -0.491901 ]
+    "center": [ 0.0, 0.12, 0.0 ],
+    "pos": [ 0.0, 0.415357, -0.733815 ]
   }
 }

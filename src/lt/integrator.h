@@ -418,6 +418,8 @@ public:
         Spectrum throughput(1.);
         Spectrum s(0.);
 
+        SurfaceInteraction prev_si;
+
         for (int d = 0; d < max_depth; d++) {
             
             SurfaceInteraction si;
@@ -439,7 +441,7 @@ public:
 
                 // Compute BRDF  contrib
                 vec3 wi = si.to_local(-r.d);
-                Brdf::Sample bs = si.brdf->sample(wi, sampler);
+                Brdf::Sample bs = si.brdf->sample(wi, sampler); // TODO: use uniform_sample_one_light's brdf sample
 
                 if (bs.wo.z < 0.0001 || wi.z < 0.0001)
                     break;
@@ -458,11 +460,14 @@ public:
                 r = Ray(p, si.to_world(bs.wo));
 
             } else {
-                for (const auto& light : scene.infinite_lights)
-                    s += throughput * light->eval(r.d);
-
+                if (d == 0) {
+                    for (const auto& light : scene.infinite_lights)
+                        s += throughput * light->eval(r.d);
+                }
                 break;
             }
+
+            prev_si = si;
         }
 
         return s;
