@@ -203,23 +203,26 @@ public:
         const std::shared_ptr<Light>& light, Scene& scene,
         Sampler& sampler)
     {
-        Spectrum contrib = vec3(0.);
+        Spectrum contrib = vec3(0.0);
         
-        si.pos -= r.d * 0.00001f;
+        si.pos -= r.d * surface_offset_eps;
 
         Light::Sample ls = light->sample(si, sampler);
-        assert(ls.pdf > 0.);
-
+        bool ls_valid = ls.pdf > 0.0 && ls.emission != Spectrum(0.0);
+     
         vec3 wo = si.to_local(-ls.direction);
         vec3 wi = si.to_local(-r.d);
 
         Ray rs(si.pos,-ls.direction);
-
-        if (!scene.shadow(rs, ls.expected_distance_to_intersection-0.00001)) {
-            if (wi.z < 0.00001) {
+        
+        // Light sampling
+        if (ls_valid && !scene.shadow(rs, ls.expected_distance_to_intersection - surface_offset_eps)) {
+            if (!valid_local_dir(wi)) {
                 return contrib;
             }
+
             Spectrum brdf_contrib = si.brdf->eval(wi, wo, sampler);
+            
             #if defined(USE_MIS)
             if (light->is_dirac()) {
                 contrib += brdf_contrib * ls.emission / ls.pdf;
@@ -239,20 +242,22 @@ public:
         }
 
         #if defined(USE_MIS)
+        // Brdf sampling
         if (!light->is_dirac()) {
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
-            if (wi.z < 0.00001 || bs.wo.z < 0.00001) {
+
+            if (!valid_local_dir(wi) || !valid_local_dir(bs.wo)) {
                 return contrib;
             }
 
             Float weight = 1.0f;
 
             Float light_pdf = light->pdf(si.pos, -si.to_world(bs.wo));
-            if (light_pdf == 0) {
+            if (light_pdf <= 0) {
                 return contrib;
             }
 
-            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            Ray r_ = Ray(si.pos - r.d * surface_offset_eps, si.to_world(bs.wo));
             SurfaceInteraction si_;
             bool intersection = scene.intersect(r_, si_); 
 
@@ -300,7 +305,7 @@ public:
         if (scene.intersect(r, si)) {
             // Continue if there is no brdf
             if (!si.brdf) {
-                r = Ray(si.pos + r.d * 0.00001f, r.d);
+                r = Ray(si.pos + r.d * surface_offset_eps, r.d);
                 return render_pixel_rec(r, scene, sampler, depth);
             }
 
@@ -309,13 +314,15 @@ public:
 
             // Compute BRDF contrib
             vec3 wi = si.to_local(-r.d);
-            if (wi.z < 0.000001)
+            if (!valid_local_dir(wi)) {
                 return s;
+            }
 
             Brdf::Sample bs = si.brdf->sample(wi, sampler);
 
-            if (bs.wo.z < 0.000001)
+            if (!valid_local_dir(bs.wo)) {
                 return s;
+            }
 
             #if !defined(SAMPLE_OPTIM)
             Float pdf = si.brdf->pdf(wi, bs.wo);
@@ -323,7 +330,7 @@ public:
             assert(brdf_cos_weighted.x == brdf_cos_weighted.x);
             #endif
 
-            Ray r_ = Ray(si.pos - r.d * 0.0001f, si.to_world(bs.wo));
+            Ray r_ = Ray(si.pos - r.d * surface_offset_eps, si.to_world(bs.wo));
             Spectrum indirect = render_pixel_rec(r_, scene, sampler, depth + 1);
             
             #if !defined(SAMPLE_OPTIM)
@@ -377,7 +384,7 @@ public:
 
         if (scene.intersect(r, si)) {
             if (!si.brdf) {
-                r = Ray(si.pos + r.d * 0.00001f, r.d);
+                r = Ray(si.pos + r.d * surface_offset_eps, r.d);
                 return render_pixel(r, scene, sampler);
             }
 
@@ -427,7 +434,7 @@ public:
 
 
                 if (!si.brdf) {
-                    r = Ray(si.pos + r.d * 0.00001f, r.d);
+                    r = Ray(si.pos + r.d * surface_offset_eps, r.d);
                     d--;
                     continue;
                 }
@@ -443,9 +450,10 @@ public:
                 vec3 wi = si.to_local(-r.d);
                 Brdf::Sample bs = si.brdf->sample(wi, sampler); // TODO: use uniform_sample_one_light's brdf sample
 
-                if (bs.wo.z < 0.0001 || wi.z < 0.0001)
+                if (!valid_local_dir(bs.wo) || !valid_local_dir(wi)) {
                     break;
-                
+                }
+
                 #if !defined(SAMPLE_OPTIM)
                 Float wo_pdf = si.brdf->pdf(wi, bs.wo);
                 Spectrum brdf_cos_weighted = si.brdf->eval(wi, bs.wo, sampler);
@@ -456,7 +464,7 @@ public:
                 #endif
 
                 // offset si.pos for next bounce
-                vec3 p = si.pos - r.d * 0.00001f;
+                vec3 p = si.pos - r.d * surface_offset_eps;
                 r = Ray(p, si.to_world(bs.wo));
 
             } else {
@@ -542,7 +550,7 @@ public:
 
         if (scene.intersect(r, si)) {
             if (!si.brdf) {
-                r = Ray(si.pos + r.d * 0.00001f, r.d);
+                r = Ray(si.pos + r.d * surface_offset_eps, r.d);
                 return render_pixel(r, scene, sampler);
             }
 

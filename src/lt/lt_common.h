@@ -24,6 +24,8 @@ using Float = float;
 
 const Float pi = 3.14159265359;
 
+const Float surface_offset_eps = 0.00001;
+
 enum LogType {
       logNoLabel
     , logDebug
@@ -182,6 +184,10 @@ inline glm::mat3 build_tbn_from_w(const vec3& w)
     vec3 tangent = vec3(1.0f + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
     vec3 bitangent = vec3(b, sign + normal.y * normal.y * a, -normal.y);
     return glm::mat3(tangent, bitangent, normal);
+}
+
+inline bool valid_local_dir(const vec3& w) {
+    return w.z >= 0.000001;
 }
 
 inline Spectrum fresnelConductor(const Float& cosThetaI, const Spectrum& eta, const Spectrum& k) {
